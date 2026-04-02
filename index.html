@@ -1,158 +1,859 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Azure ZIP Unzip Portal</title>
-    <link rel="stylesheet" href="/static/style.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Azure ZIP Unzip Portal</title>
+  <style>
+    :root {
+      --bg: #0b1220;
+      --panel: #111a2e;
+      --panel-2: #16233d;
+      --line: #243453;
+      --text: #e8eefc;
+      --muted: #9eb0d1;
+      --accent: #67b3ff;
+      --accent-2: #2f7de1;
+      --success: #18b26b;
+      --warning: #f2a93b;
+      --danger: #e85d75;
+      --shadow: 0 20px 50px rgba(0, 0, 0, 0.28);
+      --radius: 18px;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body {
+      font-family: Inter, Segoe UI, Roboto, Arial, sans-serif;
+      background: linear-gradient(180deg, #0a1020 0%, #0f1830 100%);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    .page-shell {
+      width: 100%;
+      padding: 28px;
+    }
+
+    .page {
+      max-width: 1320px;
+      margin: 0 auto;
+      display: grid;
+      gap: 24px;
+    }
+
+    .card {
+      background: rgba(17, 26, 46, 0.95);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .hero {
+      display: flex;
+      justify-content: space-between;
+      gap: 20px;
+      align-items: flex-start;
+      padding: 28px;
+      background: linear-gradient(135deg, rgba(103,179,255,0.18), rgba(47,125,225,0.05));
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+
+    .eyebrow {
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--accent);
+      font-size: 12px;
+      font-weight: 700;
+      margin-bottom: 10px;
+    }
+
+    h1, h2, h3, p { margin-top: 0; }
+    h1 { font-size: clamp(28px, 4vw, 42px); margin-bottom: 12px; }
+    h2 { font-size: 24px; margin-bottom: 8px; }
+    h3 { font-size: 20px; margin-bottom: 8px; }
+    p, label, input, button, span, td, th { font-size: 14px; }
+    .section-subtitle, .modal-subtitle, .hero-copy p, .refresh-time, .refresh-label { color: var(--muted); }
+
+    .hero-side, .refresh-box {
+      min-width: 220px;
+    }
+
+    .refresh-box, .callout {
+      background: rgba(8, 14, 26, 0.55);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 14px 16px;
+      display: grid;
+      gap: 6px;
+    }
+
+    .callout {
+      margin: 20px 28px 0;
+      background: rgba(242, 169, 59, 0.08);
+      border-color: rgba(242, 169, 59, 0.3);
+    }
+
+    .callout strong { color: #ffd28a; }
+
+    .card-header {
+      padding: 24px 28px 0;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 18px;
+      padding: 20px 28px 28px;
+    }
+
+    .form-group { display: grid; gap: 8px; }
+    .full-width { grid-column: 1 / -1; }
+
+    label { color: #c7d6f2; font-weight: 600; }
+
+    input[type="text"], input[type="password"] {
+      width: 100%;
+      border: 1px solid var(--line);
+      background: #0d1527;
+      color: var(--text);
+      padding: 13px 14px;
+      border-radius: 12px;
+      outline: none;
+    }
+
+    input::placeholder { color: #7183a9; }
+    input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(103,179,255,0.14); }
+
+    .checkbox-group { align-self: end; }
+    .checkbox-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 13px 14px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      min-height: 48px;
+      background: #0d1527;
+      font-weight: 500;
+    }
+
+    .form-actions, .toolbar, .toolbar-actions, .filter-group, .jobs-header {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .jobs-header {
+      justify-content: space-between;
+      padding-bottom: 18px;
+    }
+
+    button {
+      border: 0;
+      border-radius: 12px;
+      padding: 12px 16px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform 0.15s ease, opacity 0.15s ease, background 0.15s ease;
+    }
+    button:hover { transform: translateY(-1px); }
+    button:disabled { opacity: 0.7; cursor: not-allowed; transform: none; }
+
+    .primary-btn {
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      color: white;
+    }
+
+    .secondary-btn, .filter-btn {
+      background: #16233b;
+      color: var(--text);
+      border: 1px solid var(--line);
+    }
+
+    .filter-btn.active { border-color: var(--accent); color: white; background: #1d3154; }
+    .danger-lite { border-color: rgba(232, 93, 117, 0.35); color: #ffc7d0; }
+
+    .search-input {
+      min-width: min(100%, 360px);
+      flex: 1 1 280px;
+    }
+
+    .loader {
+      width: 18px;
+      height: 18px;
+      border: 2px solid rgba(255,255,255,0.25);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    .hidden { display: none !important; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .message {
+      margin: 0 28px 28px;
+      padding: 14px 16px;
+      border-radius: 12px;
+      border: 1px solid transparent;
+    }
+    .message.success { background: rgba(24,178,107,0.1); border-color: rgba(24,178,107,0.35); color: #b7f5d6; }
+    .message.error { background: rgba(232,93,117,0.1); border-color: rgba(232,93,117,0.35); color: #ffc8d0; }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 14px;
+      padding: 0 28px 22px;
+    }
+
+    .stat-tile {
+      background: #0d1527;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 16px;
+      display: grid;
+      gap: 8px;
+    }
+
+    .stat-label { color: var(--muted); }
+    .stat-value { font-size: 26px; font-weight: 800; }
+
+    .table-wrapper { overflow-x: auto; padding: 0 0 12px; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 1100px;
+    }
+
+    th, td {
+      text-align: left;
+      padding: 16px 18px;
+      border-top: 1px solid var(--line);
+      vertical-align: top;
+    }
+
+    th {
+      color: #c7d6f2;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      background: rgba(255,255,255,0.02);
+    }
+
+    .empty-row { text-align: center; color: var(--muted); padding: 38px 18px; }
+
+    .job-title { font-weight: 800; }
+    .job-meta, .tiny { color: var(--muted); font-size: 12px; }
+
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 800;
+      text-transform: capitalize;
+      border: 1px solid transparent;
+    }
+
+    .status-queued { background: rgba(103,179,255,0.12); color: #bdddff; border-color: rgba(103,179,255,0.28); }
+    .status-running { background: rgba(242,169,59,0.12); color: #ffd58c; border-color: rgba(242,169,59,0.28); }
+    .status-completed { background: rgba(24,178,107,0.12); color: #b7f5d6; border-color: rgba(24,178,107,0.28); }
+    .status-failed { background: rgba(232,93,117,0.12); color: #ffc7d0; border-color: rgba(232,93,117,0.28); }
+
+    .progress-shell {
+      width: 180px;
+      max-width: 100%;
+      height: 10px;
+      background: #0c1322;
+      border-radius: 999px;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      margin-bottom: 8px;
+    }
+    .progress-bar {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent), var(--accent-2));
+    }
+
+    .icon-btn {
+      padding: 9px 12px;
+      font-size: 13px;
+    }
+
+    .mono {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      word-break: break-word;
+    }
+
+    .modal {
+      position: fixed;
+      inset: 0;
+      z-index: 50;
+      display: grid;
+      place-items: center;
+      padding: 20px;
+    }
+    .modal-overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(3, 7, 18, 0.72);
+      backdrop-filter: blur(4px);
+    }
+    .modal-content {
+      position: relative;
+      width: min(920px, 100%);
+      max-height: 88vh;
+      overflow: auto;
+      background: #10192d;
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      box-shadow: var(--shadow);
+    }
+    .modal-header, .modal-body { padding: 24px 26px; }
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: flex-start;
+      border-bottom: 1px solid var(--line);
+    }
+    .close-btn {
+      background: transparent;
+      color: white;
+      font-size: 28px;
+      line-height: 1;
+      padding: 0;
+    }
+    .detail-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+    .detail-card {
+      background: #0d1527;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 16px;
+    }
+    .detail-card.full { grid-column: 1 / -1; }
+    .detail-label { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .08em; margin-bottom: 8px; }
+
+    @media (max-width: 980px) {
+      .hero, .jobs-header { flex-direction: column; }
+      .stats-grid, .form-grid, .detail-grid { grid-template-columns: 1fr; }
+      .hero-side, .refresh-box { width: 100%; }
+    }
+  </style>
 </head>
 <body>
-    <div class="page-shell">
-        <div class="page">
-            <header class="hero">
-                <div class="hero-copy">
-                    <div class="eyebrow">Azure File Share Operations</div>
-                    <h1>Azure ZIP Unzip Portal</h1>
-                    <p>Submit unzip tasks, monitor live progress, inspect failures, and review detailed job history in one clean dashboard.</p>
-                </div>
-
-                <div class="hero-side">
-                    <div class="refresh-box">
-                        <span class="refresh-label">Portal Refresh</span>
-                        <span id="lastRefresh" class="refresh-time">Last refreshed: Never</span>
-                    </div>
-                </div>
-            </header>
-
-            <section class="card form-card">
-                <div class="card-header">
-                    <div>
-                        <h2>Submit New Task</h2>
-                        <p class="section-subtitle">Provide source and destination UNC paths, then start the unzip job.</p>
-                    </div>
-                </div>
-
-                <form id="jobForm" class="form-grid">
-                    <div class="form-group full-width">
-                        <label for="source_unc">Source UNC</label>
-                        <input type="text" id="source_unc" placeholder="\\storageaccount.file.core.windows.net\share\file.zip" required>
-                    </div>
-
-                    <div class="form-group full-width">
-                        <label for="destination_unc">Destination UNC</label>
-                        <input type="text" id="destination_unc" placeholder="\\storageaccount.file.core.windows.net\share\folder" required>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="zip_password">ZIP Password (optional)</label>
-                        <input type="password" id="zip_password" placeholder="Enter password if ZIP is protected">
-                    </div>
-
-                    <div class="form-group checkbox-group">
-                        <label class="checkbox-label">
-                            <input type="checkbox" id="overwrite" checked>
-                            <span>Overwrite existing files</span>
-                        </label>
-                    </div>
-
-                    <div class="form-actions full-width">
-                        <button type="submit" id="submitBtn" class="primary-btn">Start Unzip</button>
-                        <span id="submitLoader" class="loader hidden"></span>
-                    </div>
-                </form>
-
-                <div id="submitMessage" class="message hidden"></div>
-            </section>
-
-            <section class="card jobs-card">
-                <div class="card-header jobs-header">
-                    <div>
-                        <h2>Jobs</h2>
-                        <p class="section-subtitle">Live queue and history of submitted unzip jobs.</p>
-                    </div>
-
-                    <div class="toolbar">
-                        <input type="text" id="searchBox" class="search-input" placeholder="Search by job ID, ZIP file, source, destination">
-
-                        <div class="filter-group">
-                            <button class="filter-btn active" data-status="">All</button>
-                            <button class="filter-btn" data-status="queued">Queued</button>
-                            <button class="filter-btn" data-status="running">Running</button>
-                            <button class="filter-btn" data-status="completed">Completed</button>
-                            <button class="filter-btn" data-status="failed">Failed</button>
-                        </div>
-
-                        <div class="toolbar-actions">
-                            <button id="refreshBtn" class="secondary-btn">Refresh</button>
-                            <button id="clearFinishedBtn" class="secondary-btn danger-lite">Clear Finished</button>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="stats-grid" id="statsGrid">
-                    <div class="stat-tile">
-                        <span class="stat-label">Total</span>
-                        <span class="stat-value" id="statTotal">0</span>
-                    </div>
-                    <div class="stat-tile">
-                        <span class="stat-label">Queued</span>
-                        <span class="stat-value" id="statQueued">0</span>
-                    </div>
-                    <div class="stat-tile">
-                        <span class="stat-label">Running</span>
-                        <span class="stat-value" id="statRunning">0</span>
-                    </div>
-                    <div class="stat-tile">
-                        <span class="stat-label">Completed</span>
-                        <span class="stat-value" id="statCompleted">0</span>
-                    </div>
-                    <div class="stat-tile">
-                        <span class="stat-label">Failed</span>
-                        <span class="stat-value" id="statFailed">0</span>
-                    </div>
-                </div>
-
-                <div class="table-wrapper">
-                    <table id="jobsTable">
-                        <thead>
-                            <tr>
-                                <th>Job</th>
-                                <th>Status</th>
-                                <th>Progress</th>
-                                <th>ZIP File</th>
-                                <th>Timeline</th>
-                                <th>Counts</th>
-                                <th>Duration</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="jobsBody">
-                            <tr>
-                                <td colspan="8" class="empty-row">Loading jobs...</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </section>
+  <div class="page-shell">
+    <div class="page">
+      <header class="hero">
+        <div class="hero-copy">
+          <div class="eyebrow">Azure File Share Operations</div>
+          <h1>Azure ZIP Unzip Portal</h1>
+          <p>Submit unzip tasks, monitor progress, inspect failures, and review job history from a single self-contained page.</p>
         </div>
-    </div>
+        <div class="hero-side">
+          <div class="refresh-box">
+            <span class="refresh-label">Portal Refresh</span>
+            <span id="lastRefresh" class="refresh-time">Last refreshed: Never</span>
+          </div>
+        </div>
+      </header>
 
-    <div id="detailsModal" class="modal hidden" aria-hidden="true">
-        <div class="modal-overlay" id="modalOverlay"></div>
+      <section class="card form-card">
+        <div class="callout" id="modeBanner">
+          <strong>Static website mode.</strong>
+          <span>This page now works as a self-contained Azure static site. It stores jobs in localStorage unless you set <span class="mono">window.APP_CONFIG.apiBaseUrl</span> to a real API.</span>
+        </div>
 
-        <div class="modal-content" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
-            <div class="modal-header">
-                <div>
-                    <h3 id="modalTitle">Job Details</h3>
-                    <p class="modal-subtitle">Detailed status, counters, and backend error information.</p>
-                </div>
-                <button id="closeModalBtn" class="close-btn" aria-label="Close modal">&times;</button>
+        <div class="card-header">
+          <div>
+            <h2>Submit New Task</h2>
+            <p class="section-subtitle">Provide source and destination UNC paths, then start the unzip job.</p>
+          </div>
+        </div>
+
+        <form id="jobForm" class="form-grid">
+          <div class="form-group full-width">
+            <label for="source_unc">Source UNC</label>
+            <input type="text" id="source_unc" placeholder="\\storageaccount.file.core.windows.net\share\file.zip" required />
+          </div>
+
+          <div class="form-group full-width">
+            <label for="destination_unc">Destination UNC</label>
+            <input type="text" id="destination_unc" placeholder="\\storageaccount.file.core.windows.net\share\folder" required />
+          </div>
+
+          <div class="form-group">
+            <label for="zip_password">ZIP Password (optional)</label>
+            <input type="password" id="zip_password" placeholder="Enter password if ZIP is protected" />
+          </div>
+
+          <div class="form-group checkbox-group">
+            <label class="checkbox-label">
+              <input type="checkbox" id="overwrite" checked />
+              <span>Overwrite existing files</span>
+            </label>
+          </div>
+
+          <div class="form-actions full-width">
+            <button type="submit" id="submitBtn" class="primary-btn">Start Unzip</button>
+            <span id="submitLoader" class="loader hidden"></span>
+          </div>
+        </form>
+
+        <div id="submitMessage" class="message hidden"></div>
+      </section>
+
+      <section class="card jobs-card">
+        <div class="card-header jobs-header">
+          <div>
+            <h2>Jobs</h2>
+            <p class="section-subtitle">Live queue and history of submitted unzip jobs.</p>
+          </div>
+
+          <div class="toolbar">
+            <input type="text" id="searchBox" class="search-input" placeholder="Search by job ID, ZIP file, source, destination" />
+
+            <div class="filter-group">
+              <button type="button" class="filter-btn active" data-status="">All</button>
+              <button type="button" class="filter-btn" data-status="queued">Queued</button>
+              <button type="button" class="filter-btn" data-status="running">Running</button>
+              <button type="button" class="filter-btn" data-status="completed">Completed</button>
+              <button type="button" class="filter-btn" data-status="failed">Failed</button>
             </div>
 
-            <div id="modalBody" class="modal-body"></div>
+            <div class="toolbar-actions">
+              <button type="button" id="refreshBtn" class="secondary-btn">Refresh</button>
+              <button type="button" id="clearFinishedBtn" class="secondary-btn danger-lite">Clear Finished</button>
+            </div>
+          </div>
         </div>
-    </div>
 
-    <script src="/static/app.js"></script>
+        <div class="stats-grid" id="statsGrid">
+          <div class="stat-tile"><span class="stat-label">Total</span><span class="stat-value" id="statTotal">0</span></div>
+          <div class="stat-tile"><span class="stat-label">Queued</span><span class="stat-value" id="statQueued">0</span></div>
+          <div class="stat-tile"><span class="stat-label">Running</span><span class="stat-value" id="statRunning">0</span></div>
+          <div class="stat-tile"><span class="stat-label">Completed</span><span class="stat-value" id="statCompleted">0</span></div>
+          <div class="stat-tile"><span class="stat-label">Failed</span><span class="stat-value" id="statFailed">0</span></div>
+        </div>
+
+        <div class="table-wrapper">
+          <table id="jobsTable">
+            <thead>
+              <tr>
+                <th>Job</th>
+                <th>Status</th>
+                <th>Progress</th>
+                <th>ZIP File</th>
+                <th>Timeline</th>
+                <th>Counts</th>
+                <th>Duration</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="jobsBody">
+              <tr><td colspan="8" class="empty-row">Loading jobs...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <div id="detailsModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-overlay" id="modalOverlay"></div>
+    <div class="modal-content" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <div class="modal-header">
+        <div>
+          <h3 id="modalTitle">Job Details</h3>
+          <p class="modal-subtitle">Detailed status, counters, and backend error information.</p>
+        </div>
+        <button type="button" id="closeModalBtn" class="close-btn" aria-label="Close modal">&times;</button>
+      </div>
+      <div id="modalBody" class="modal-body"></div>
+    </div>
+  </div>
+
+  <script>
+    window.APP_CONFIG = window.APP_CONFIG || {
+      apiBaseUrl: "",
+      refreshMs: 8000,
+      storageKey: "azure-unzip-jobs"
+    };
+  </script>
+
+  <script>
+    (() => {
+      const config = window.APP_CONFIG || {};
+      const state = {
+        jobs: [],
+        filterStatus: "",
+        search: "",
+        refreshTimer: null,
+      };
+
+      const el = {
+        form: document.getElementById('jobForm'),
+        source: document.getElementById('source_unc'),
+        destination: document.getElementById('destination_unc'),
+        password: document.getElementById('zip_password'),
+        overwrite: document.getElementById('overwrite'),
+        submitBtn: document.getElementById('submitBtn'),
+        submitLoader: document.getElementById('submitLoader'),
+        submitMessage: document.getElementById('submitMessage'),
+        jobsBody: document.getElementById('jobsBody'),
+        refreshBtn: document.getElementById('refreshBtn'),
+        clearFinishedBtn: document.getElementById('clearFinishedBtn'),
+        searchBox: document.getElementById('searchBox'),
+        lastRefresh: document.getElementById('lastRefresh'),
+        modeBanner: document.getElementById('modeBanner'),
+        detailsModal: document.getElementById('detailsModal'),
+        modalOverlay: document.getElementById('modalOverlay'),
+        closeModalBtn: document.getElementById('closeModalBtn'),
+        modalBody: document.getElementById('modalBody'),
+        modalTitle: document.getElementById('modalTitle'),
+        statTotal: document.getElementById('statTotal'),
+        statQueued: document.getElementById('statQueued'),
+        statRunning: document.getElementById('statRunning'),
+        statCompleted: document.getElementById('statCompleted'),
+        statFailed: document.getElementById('statFailed')
+      };
+
+      const isApiMode = Boolean(config.apiBaseUrl && String(config.apiBaseUrl).trim());
+      el.modeBanner.innerHTML = isApiMode
+        ? '<strong>API mode enabled.</strong><span>Requests will be sent to <span class="mono">' + escapeHtml(config.apiBaseUrl) + '</span>.</span>'
+        : '<strong>Static website mode.</strong><span>This page runs entirely in the browser and stores jobs in <span class="mono">localStorage</span>. A pure Azure static website cannot unzip files by itself without a backend API.</span>';
+
+      function escapeHtml(value) {
+        return String(value ?? '')
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#39;');
+      }
+
+      function basename(path) {
+        const clean = String(path || '').replace(/\\+/g, '/');
+        const parts = clean.split('/').filter(Boolean);
+        return parts[parts.length - 1] || 'unknown.zip';
+      }
+
+      function formatDate(value) {
+        if (!value) return '—';
+        const d = new Date(value);
+        if (Number.isNaN(d.getTime())) return '—';
+        return d.toLocaleString();
+      }
+
+      function durationText(job) {
+        if (!job.createdAt) return '—';
+        const start = new Date(job.createdAt).getTime();
+        const end = job.completedAt ? new Date(job.completedAt).getTime() : Date.now();
+        const seconds = Math.max(0, Math.floor((end - start) / 1000));
+        const mins = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        return mins > 0 ? `${mins}m ${secs}s` : `${secs}s`;
+      }
+
+      function readJobs() {
+        try {
+          const raw = localStorage.getItem(config.storageKey || 'azure-unzip-jobs');
+          return raw ? JSON.parse(raw) : [];
+        } catch {
+          return [];
+        }
+      }
+
+      function writeJobs(jobs) {
+        localStorage.setItem(config.storageKey || 'azure-unzip-jobs', JSON.stringify(jobs));
+      }
+
+      function simulateJobs(jobs) {
+        const now = Date.now();
+        let changed = false;
+        jobs = jobs.map(job => {
+          if (job.status === 'queued' && now - new Date(job.createdAt).getTime() > 4000) {
+            changed = true;
+            return { ...job, status: 'running', startedAt: new Date().toISOString(), progress: 12 };
+          }
+          if (job.status === 'running') {
+            const next = Math.min(100, (job.progress || 0) + Math.floor(Math.random() * 18));
+            changed = true;
+            if (next >= 100) {
+              const totalFiles = Math.max(1, job.totalFiles || (20 + Math.floor(Math.random() * 150)));
+              const failedFiles = 0;
+              return {
+                ...job,
+                progress: 100,
+                status: 'completed',
+                completedAt: new Date().toISOString(),
+                totalFiles,
+                extractedFiles: totalFiles,
+                failedFiles,
+                message: 'Unzip completed successfully.'
+              };
+            }
+            return {
+              ...job,
+              status: 'running',
+              progress: next,
+              totalFiles: job.totalFiles || (20 + Math.floor(Math.random() * 150)),
+              extractedFiles: Math.floor(((job.totalFiles || 100) * next) / 100)
+            };
+          }
+          return job;
+        });
+        if (changed) writeJobs(jobs);
+        return jobs;
+      }
+
+      async function apiFetch(path, options = {}) {
+        const url = String(config.apiBaseUrl).replace(/\/$/, '') + path;
+        const response = await fetch(url, {
+          headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
+          ...options
+        });
+        if (!response.ok) {
+          const text = await response.text();
+          throw new Error(text || `Request failed with status ${response.status}`);
+        }
+        return response.json();
+      }
+
+      async function loadJobs() {
+        try {
+          if (isApiMode) {
+            const payload = await apiFetch('/api/jobs');
+            state.jobs = Array.isArray(payload) ? payload : (payload.jobs || []);
+          } else {
+            state.jobs = simulateJobs(readJobs());
+          }
+          render();
+          setLastRefresh();
+        } catch (error) {
+          showMessage(error.message || 'Failed to load jobs.', 'error');
+        }
+      }
+
+      function setLastRefresh() {
+        el.lastRefresh.textContent = 'Last refreshed: ' + new Date().toLocaleString();
+      }
+
+      function showMessage(message, type = 'success') {
+        el.submitMessage.textContent = message;
+        el.submitMessage.className = `message ${type}`;
+        el.submitMessage.classList.remove('hidden');
+      }
+
+      function clearMessage() {
+        el.submitMessage.className = 'message hidden';
+        el.submitMessage.textContent = '';
+      }
+
+      function validateUNC(value, fieldName) {
+        if (!/^\\\\[^\\]+\\[^\\]+/.test(value.trim())) {
+          throw new Error(`${fieldName} must be a valid UNC path like \\\\server\\share\\path`);
+        }
+      }
+
+      async function submitJob(event) {
+        event.preventDefault();
+        clearMessage();
+        el.submitBtn.disabled = true;
+        el.submitLoader.classList.remove('hidden');
+
+        try {
+          const source_unc = el.source.value.trim();
+          const destination_unc = el.destination.value.trim();
+          validateUNC(source_unc, 'Source UNC');
+          validateUNC(destination_unc, 'Destination UNC');
+
+          const payload = {
+            source_unc,
+            destination_unc,
+            zip_password: el.password.value,
+            overwrite: el.overwrite.checked
+          };
+
+          if (isApiMode) {
+            await apiFetch('/api/jobs', { method: 'POST', body: JSON.stringify(payload) });
+          } else {
+            const jobs = readJobs();
+            const job = {
+              id: crypto.randomUUID ? crypto.randomUUID() : 'job-' + Date.now(),
+              source_unc,
+              destination_unc,
+              zipFile: basename(source_unc),
+              overwrite: payload.overwrite,
+              hasPassword: Boolean(payload.zip_password),
+              status: 'queued',
+              progress: 0,
+              totalFiles: 0,
+              extractedFiles: 0,
+              failedFiles: 0,
+              message: 'Job submitted in static website mode.',
+              createdAt: new Date().toISOString(),
+              startedAt: null,
+              completedAt: null,
+              error: null
+            };
+            jobs.unshift(job);
+            writeJobs(jobs);
+          }
+
+          el.form.reset();
+          el.overwrite.checked = true;
+          showMessage(isApiMode ? 'Job submitted successfully.' : 'Job added locally. Connect an API to run real unzip operations.', 'success');
+          await loadJobs();
+        } catch (error) {
+          showMessage(error.message || 'Failed to submit job.', 'error');
+        } finally {
+          el.submitBtn.disabled = false;
+          el.submitLoader.classList.add('hidden');
+        }
+      }
+
+      function filteredJobs() {
+        const q = state.search.trim().toLowerCase();
+        return state.jobs.filter(job => {
+          const statusMatch = !state.filterStatus || job.status === state.filterStatus;
+          const haystack = [job.id, job.zipFile, job.source_unc, job.destination_unc, job.status].join(' ').toLowerCase();
+          const searchMatch = !q || haystack.includes(q);
+          return statusMatch && searchMatch;
+        });
+      }
+
+      function renderStats() {
+        const totals = state.jobs.reduce((acc, job) => {
+          acc.total += 1;
+          if (acc[job.status] !== undefined) acc[job.status] += 1;
+          return acc;
+        }, { total: 0, queued: 0, running: 0, completed: 0, failed: 0 });
+
+        el.statTotal.textContent = totals.total;
+        el.statQueued.textContent = totals.queued;
+        el.statRunning.textContent = totals.running;
+        el.statCompleted.textContent = totals.completed;
+        el.statFailed.textContent = totals.failed;
+      }
+
+      function render() {
+        renderStats();
+        const jobs = filteredJobs();
+        if (!jobs.length) {
+          el.jobsBody.innerHTML = '<tr><td colspan="8" class="empty-row">No jobs match the current filters.</td></tr>';
+          return;
+        }
+
+        el.jobsBody.innerHTML = jobs.map(job => {
+          const progress = Math.max(0, Math.min(100, Number(job.progress || 0)));
+          return `
+            <tr>
+              <td>
+                <div class="job-title mono">${escapeHtml(job.id || '—')}</div>
+                <div class="job-meta">${escapeHtml(job.source_unc || '')}</div>
+              </td>
+              <td><span class="status-pill status-${escapeHtml(job.status || 'queued')}">${escapeHtml(job.status || 'queued')}</span></td>
+              <td>
+                <div class="progress-shell"><div class="progress-bar" style="width:${progress}%"></div></div>
+                <div class="tiny">${progress}%</div>
+              </td>
+              <td>
+                <div>${escapeHtml(job.zipFile || basename(job.source_unc || ''))}</div>
+                <div class="tiny mono">${escapeHtml(job.destination_unc || '')}</div>
+              </td>
+              <td>
+                <div class="tiny">Created: ${escapeHtml(formatDate(job.createdAt))}</div>
+                <div class="tiny">Started: ${escapeHtml(formatDate(job.startedAt))}</div>
+                <div class="tiny">Ended: ${escapeHtml(formatDate(job.completedAt))}</div>
+              </td>
+              <td>
+                <div class="tiny">Total: ${escapeHtml(job.totalFiles ?? 0)}</div>
+                <div class="tiny">Extracted: ${escapeHtml(job.extractedFiles ?? 0)}</div>
+                <div class="tiny">Failed: ${escapeHtml(job.failedFiles ?? 0)}</div>
+              </td>
+              <td>${escapeHtml(durationText(job))}</td>
+              <td><button type="button" class="secondary-btn icon-btn" data-details="${escapeHtml(job.id)}">Details</button></td>
+            </tr>`;
+        }).join('');
+
+        document.querySelectorAll('[data-details]').forEach(button => {
+          button.addEventListener('click', () => openDetails(button.getAttribute('data-details')));
+        });
+      }
+
+      function openDetails(jobId) {
+        const job = state.jobs.find(item => String(item.id) === String(jobId));
+        if (!job) return;
+
+        el.modalTitle.textContent = `Job Details · ${job.id}`;
+        el.modalBody.innerHTML = `
+          <div class="detail-grid">
+            <div class="detail-card"><div class="detail-label">Status</div><div><span class="status-pill status-${escapeHtml(job.status)}">${escapeHtml(job.status)}</span></div></div>
+            <div class="detail-card"><div class="detail-label">Progress</div><div>${escapeHtml(job.progress ?? 0)}%</div></div>
+            <div class="detail-card full"><div class="detail-label">Source UNC</div><div class="mono">${escapeHtml(job.source_unc || '—')}</div></div>
+            <div class="detail-card full"><div class="detail-label">Destination UNC</div><div class="mono">${escapeHtml(job.destination_unc || '—')}</div></div>
+            <div class="detail-card"><div class="detail-label">Created</div><div>${escapeHtml(formatDate(job.createdAt))}</div></div>
+            <div class="detail-card"><div class="detail-label">Duration</div><div>${escapeHtml(durationText(job))}</div></div>
+            <div class="detail-card"><div class="detail-label">Extracted Files</div><div>${escapeHtml(job.extractedFiles ?? 0)}</div></div>
+            <div class="detail-card"><div class="detail-label">Failed Files</div><div>${escapeHtml(job.failedFiles ?? 0)}</div></div>
+            <div class="detail-card full"><div class="detail-label">Message</div><div>${escapeHtml(job.message || '—')}</div></div>
+            <div class="detail-card full"><div class="detail-label">Error</div><div>${escapeHtml(job.error || 'None')}</div></div>
+          </div>`;
+
+        el.detailsModal.classList.remove('hidden');
+        el.detailsModal.setAttribute('aria-hidden', 'false');
+      }
+
+      function closeDetails() {
+        el.detailsModal.classList.add('hidden');
+        el.detailsModal.setAttribute('aria-hidden', 'true');
+      }
+
+      async function clearFinished() {
+        if (isApiMode) {
+          showMessage('Wire this button to your API delete/archive endpoint if you want server-side cleanup.', 'error');
+          return;
+        }
+        const remaining = readJobs().filter(job => !['completed', 'failed'].includes(job.status));
+        writeJobs(remaining);
+        await loadJobs();
+      }
+
+      function bindEvents() {
+        el.form.addEventListener('submit', submitJob);
+        el.refreshBtn.addEventListener('click', loadJobs);
+        el.clearFinishedBtn.addEventListener('click', clearFinished);
+        el.searchBox.addEventListener('input', (e) => { state.search = e.target.value; render(); });
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+          btn.addEventListener('click', () => {
+            document.querySelectorAll('.filter-btn').forEach(x => x.classList.remove('active'));
+            btn.classList.add('active');
+            state.filterStatus = btn.dataset.status || '';
+            render();
+          });
+        });
+        el.closeModalBtn.addEventListener('click', closeDetails);
+        el.modalOverlay.addEventListener('click', closeDetails);
+        document.addEventListener('keydown', (e) => {
+          if (e.key === 'Escape') closeDetails();
+        });
+      }
+
+      bindEvents();
+      loadJobs();
+      state.refreshTimer = window.setInterval(loadJobs, Number(config.refreshMs || 8000));
+    })();
+  </script>
 </body>
 </html>
