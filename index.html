@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Azure ZIP Unzip Portal</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="page-shell">
+        <div class="page">
+            <header class="hero">
+                <div class="hero-copy">
+                    <div class="eyebrow">Azure File Share Operations</div>
+                    <h1>Azure ZIP Unzip Portal</h1>
+                    <p>Submit unzip tasks, monitor live progress, inspect failures, and review detailed job history in one clean dashboard.</p>
+                </div>
+
+                <div class="hero-side">
+                    <div class="refresh-box">
+                        <span class="refresh-label">Portal Refresh</span>
+                        <span id="lastRefresh" class="refresh-time">Last refreshed: Never</span>
+                    </div>
+                </div>
+            </header>
+
+            <section class="card form-card">
+                <div class="card-header">
+                    <div>
+                        <h2>Submit New Task</h2>
+                        <p class="section-subtitle">Provide source and destination UNC paths, then start the unzip job.</p>
+                    </div>
+                </div>
+
+                <form id="jobForm" class="form-grid">
+                    <div class="form-group full-width">
+                        <label for="source_unc">Source UNC</label>
+                        <input type="text" id="source_unc" placeholder="\\storageaccount.file.core.windows.net\share\file.zip" required>
+                    </div>
+
+                    <div class="form-group full-width">
+                        <label for="destination_unc">Destination UNC</label>
+                        <input type="text" id="destination_unc" placeholder="\\storageaccount.file.core.windows.net\share\folder" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="zip_password">ZIP Password (optional)</label>
+                        <input type="password" id="zip_password" placeholder="Enter password if ZIP is protected">
+                    </div>
+
+                    <div class="form-group checkbox-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="overwrite" checked>
+                            <span>Overwrite existing files</span>
+                        </label>
+                    </div>
+
+                    <div class="form-actions full-width">
+                        <button type="submit" id="submitBtn" class="primary-btn">Start Unzip</button>
+                        <span id="submitLoader" class="loader hidden"></span>
+                    </div>
+                </form>
+
+                <div id="submitMessage" class="message hidden"></div>
+            </section>
+
+            <section class="card jobs-card">
+                <div class="card-header jobs-header">
+                    <div>
+                        <h2>Jobs</h2>
+                        <p class="section-subtitle">Live queue and history of submitted unzip jobs.</p>
+                    </div>
+
+                    <div class="toolbar">
+                        <input type="text" id="searchBox" class="search-input" placeholder="Search by job ID, ZIP file, source, destination">
+
+                        <div class="filter-group">
+                            <button class="filter-btn active" data-status="">All</button>
+                            <button class="filter-btn" data-status="queued">Queued</button>
+                            <button class="filter-btn" data-status="running">Running</button>
+                            <button class="filter-btn" data-status="completed">Completed</button>
+                            <button class="filter-btn" data-status="failed">Failed</button>
+                        </div>
+
+                        <div class="toolbar-actions">
+                            <button id="refreshBtn" class="secondary-btn">Refresh</button>
+                            <button id="clearFinishedBtn" class="secondary-btn danger-lite">Clear Finished</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="stats-grid" id="statsGrid">
+                    <div class="stat-tile">
+                        <span class="stat-label">Total</span>
+                        <span class="stat-value" id="statTotal">0</span>
+                    </div>
+                    <div class="stat-tile">
+                        <span class="stat-label">Queued</span>
+                        <span class="stat-value" id="statQueued">0</span>
+                    </div>
+                    <div class="stat-tile">
+                        <span class="stat-label">Running</span>
+                        <span class="stat-value" id="statRunning">0</span>
+                    </div>
+                    <div class="stat-tile">
+                        <span class="stat-label">Completed</span>
+                        <span class="stat-value" id="statCompleted">0</span>
+                    </div>
+                    <div class="stat-tile">
+                        <span class="stat-label">Failed</span>
+                        <span class="stat-value" id="statFailed">0</span>
+                    </div>
+                </div>
+
+                <div class="table-wrapper">
+                    <table id="jobsTable">
+                        <thead>
+                            <tr>
+                                <th>Job</th>
+                                <th>Status</th>
+                                <th>Progress</th>
+                                <th>ZIP File</th>
+                                <th>Timeline</th>
+                                <th>Counts</th>
+                                <th>Duration</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="jobsBody">
+                            <tr>
+                                <td colspan="8" class="empty-row">Loading jobs...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <div id="detailsModal" class="modal hidden" aria-hidden="true">
+        <div class="modal-overlay" id="modalOverlay"></div>
+
+        <div class="modal-content" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+            <div class="modal-header">
+                <div>
+                    <h3 id="modalTitle">Job Details</h3>
+                    <p class="modal-subtitle">Detailed status, counters, and backend error information.</p>
+                </div>
+                <button id="closeModalBtn" class="close-btn" aria-label="Close modal">&times;</button>
+            </div>
+
+            <div id="modalBody" class="modal-body"></div>
+        </div>
+    </div>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>
