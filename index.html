@@ -483,377 +483,496 @@
     </div>
   </div>
 
-  <script>
-    window.APP_CONFIG = window.APP_CONFIG || {
-      apiBaseUrl: "https://test-unzip-a7fmdddddrendmg4.centralus-01.azurewebsites.net",
-      refreshMs: 8000,
-      storageKey: "azure-unzip-jobs"
+<script>
+  window.APP_CONFIG = window.APP_CONFIG || {
+    apiBaseUrl: "https://test-unzip-a7fmdddddrendmg4.centralus-01.azurewebsites.net",
+    functionKey: "",
+    refreshMs: 8000,
+    storageKey: "azure-unzip-durable-jobs"
+  };
+</script>
+
+<script>
+  (() => {
+    const config = window.APP_CONFIG || {};
+    const state = {
+      jobs: [],
+      filterStatus: "",
+      search: "",
+      refreshTimer: null,
     };
-  </script>
 
-  <script>
-    (() => {
-      const config = window.APP_CONFIG || {};
-      const state = {
-        jobs: [],
-        filterStatus: "",
-        search: "",
-        refreshTimer: null,
-      };
+    const el = {
+      form: document.getElementById('jobForm'),
+      source: document.getElementById('source_unc'),
+      destination: document.getElementById('destination_unc'),
+      password: document.getElementById('zip_password'),
+      overwrite: document.getElementById('overwrite'),
+      submitBtn: document.getElementById('submitBtn'),
+      submitLoader: document.getElementById('submitLoader'),
+      submitMessage: document.getElementById('submitMessage'),
+      jobsBody: document.getElementById('jobsBody'),
+      refreshBtn: document.getElementById('refreshBtn'),
+      clearFinishedBtn: document.getElementById('clearFinishedBtn'),
+      searchBox: document.getElementById('searchBox'),
+      lastRefresh: document.getElementById('lastRefresh'),
+      modeBanner: document.getElementById('modeBanner'),
+      detailsModal: document.getElementById('detailsModal'),
+      modalOverlay: document.getElementById('modalOverlay'),
+      closeModalBtn: document.getElementById('closeModalBtn'),
+      modalBody: document.getElementById('modalBody'),
+      modalTitle: document.getElementById('modalTitle'),
+      statTotal: document.getElementById('statTotal'),
+      statQueued: document.getElementById('statQueued'),
+      statRunning: document.getElementById('statRunning'),
+      statCompleted: document.getElementById('statCompleted'),
+      statFailed: document.getElementById('statFailed')
+    };
 
-      const el = {
-        form: document.getElementById('jobForm'),
-        source: document.getElementById('source_unc'),
-        destination: document.getElementById('destination_unc'),
-        password: document.getElementById('zip_password'),
-        overwrite: document.getElementById('overwrite'),
-        submitBtn: document.getElementById('submitBtn'),
-        submitLoader: document.getElementById('submitLoader'),
-        submitMessage: document.getElementById('submitMessage'),
-        jobsBody: document.getElementById('jobsBody'),
-        refreshBtn: document.getElementById('refreshBtn'),
-        clearFinishedBtn: document.getElementById('clearFinishedBtn'),
-        searchBox: document.getElementById('searchBox'),
-        lastRefresh: document.getElementById('lastRefresh'),
-        modeBanner: document.getElementById('modeBanner'),
-        detailsModal: document.getElementById('detailsModal'),
-        modalOverlay: document.getElementById('modalOverlay'),
-        closeModalBtn: document.getElementById('closeModalBtn'),
-        modalBody: document.getElementById('modalBody'),
-        modalTitle: document.getElementById('modalTitle'),
-        statTotal: document.getElementById('statTotal'),
-        statQueued: document.getElementById('statQueued'),
-        statRunning: document.getElementById('statRunning'),
-        statCompleted: document.getElementById('statCompleted'),
-        statFailed: document.getElementById('statFailed')
-      };
+    const isApiMode = Boolean(config.apiBaseUrl && String(config.apiBaseUrl).trim());
+    el.modeBanner.innerHTML = isApiMode
+      ? '<strong>Durable API mode.</strong><span>Requests will be sent to <span class="mono">' + escapeHtml(config.apiBaseUrl) + '</span>.</span>'
+      : '<strong>Static website mode.</strong><span>This page runs entirely in the browser and stores jobs in <span class="mono">localStorage</span>. A pure Azure static website cannot unzip files by itself without a backend API.</span>';
 
-      const isApiMode = Boolean(config.apiBaseUrl && String(config.apiBaseUrl).trim());
-      el.modeBanner.innerHTML = isApiMode
-        ? '<strong>API mode enabled.</strong><span>Requests will be sent to <span class="mono">' + escapeHtml(config.apiBaseUrl) + '</span>.</span>'
-        : '<strong>Static website mode.</strong><span>This page runs entirely in the browser and stores jobs in <span class="mono">localStorage</span>. A pure Azure static website cannot unzip files by itself without a backend API.</span>';
+    function escapeHtml(value) {
+      return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
 
-      function escapeHtml(value) {
-        return String(value ?? '')
-          .replace(/&/g, '&amp;')
-          .replace(/</g, '&lt;')
-          .replace(/>/g, '&gt;')
-          .replace(/"/g, '&quot;')
-          .replace(/'/g, '&#39;');
+    function apiHeaders() {
+      const headers = { 'Content-Type': 'application/json' };
+      if (config.functionKey) headers['x-functions-key'] = config.functionKey;
+      return headers;
+    }
+
+    function withFunctionKey(url) {
+      if (!config.functionKey) return url;
+      const separator = url.includes('?') ? '&' : '?';
+      return `${url}${separator}code=${encodeURIComponent(config.functionKey)}`;
+    }
+
+    function basename(path) {
+      const clean = String(path || '').replace(/\\+/g, '/');
+      const parts = clean.split('/').filter(Boolean);
+      return parts[parts.length - 1] || 'unknown.zip';
+    }
+
+    function formatDate(value) {
+      if (!value) return '—';
+      const d = new Date(value);
+      if (Number.isNaN(d.getTime())) return '—';
+      return d.toLocaleString();
+    }
+
+    function durationText(job) {
+      if (!job.createdAt) return '—';
+      const start = new Date(job.createdAt).getTime();
+      const end = job.completedAt ? new Date(job.completedAt).getTime() : Date.now();
+      const seconds = Math.max(0, Math.floor((end - start) / 1000));
+      const mins = Math.floor(seconds / 60);
+      const secs = seconds % 60;
+      return mins > 0 ? `${mins}m ${secs}s` : `${secs}s`;
+    }
+
+    function readJobs() {
+      try {
+        const raw = localStorage.getItem(config.storageKey || 'azure-unzip-durable-jobs');
+        return raw ? JSON.parse(raw) : [];
+      } catch {
+        return [];
       }
+    }
 
-      function basename(path) {
-        const clean = String(path || '').replace(/\\+/g, '/');
-        const parts = clean.split('/').filter(Boolean);
-        return parts[parts.length - 1] || 'unknown.zip';
-      }
+    function writeJobs(jobs) {
+      localStorage.setItem(config.storageKey || 'azure-unzip-durable-jobs', JSON.stringify(jobs));
+    }
 
-      function formatDate(value) {
-        if (!value) return '—';
-        const d = new Date(value);
-        if (Number.isNaN(d.getTime())) return '—';
-        return d.toLocaleString();
-      }
-
-      function durationText(job) {
-        if (!job.createdAt) return '—';
-        const start = new Date(job.createdAt).getTime();
-        const end = job.completedAt ? new Date(job.completedAt).getTime() : Date.now();
-        const seconds = Math.max(0, Math.floor((end - start) / 1000));
-        const mins = Math.floor(seconds / 60);
-        const secs = seconds % 60;
-        return mins > 0 ? `${mins}m ${secs}s` : `${secs}s`;
-      }
-
-      function readJobs() {
-        try {
-          const raw = localStorage.getItem(config.storageKey || 'azure-unzip-jobs');
-          return raw ? JSON.parse(raw) : [];
-        } catch {
-          return [];
+    function simulateJobs(jobs) {
+      const now = Date.now();
+      let changed = false;
+      jobs = jobs.map(job => {
+        if (job.status === 'queued' && now - new Date(job.createdAt).getTime() > 4000) {
+          changed = true;
+          return { ...job, status: 'running', startedAt: new Date().toISOString(), progress: 12 };
         }
-      }
-
-      function writeJobs(jobs) {
-        localStorage.setItem(config.storageKey || 'azure-unzip-jobs', JSON.stringify(jobs));
-      }
-
-      function simulateJobs(jobs) {
-        const now = Date.now();
-        let changed = false;
-        jobs = jobs.map(job => {
-          if (job.status === 'queued' && now - new Date(job.createdAt).getTime() > 4000) {
-            changed = true;
-            return { ...job, status: 'running', startedAt: new Date().toISOString(), progress: 12 };
-          }
-          if (job.status === 'running') {
-            const next = Math.min(100, (job.progress || 0) + Math.floor(Math.random() * 18));
-            changed = true;
-            if (next >= 100) {
-              const totalFiles = Math.max(1, job.totalFiles || (20 + Math.floor(Math.random() * 150)));
-              const failedFiles = 0;
-              return {
-                ...job,
-                progress: 100,
-                status: 'completed',
-                completedAt: new Date().toISOString(),
-                totalFiles,
-                extractedFiles: totalFiles,
-                failedFiles,
-                message: 'Unzip completed successfully.'
-              };
-            }
+        if (job.status === 'running') {
+          const next = Math.min(100, (job.progress || 0) + Math.floor(Math.random() * 18));
+          changed = true;
+          if (next >= 100) {
+            const totalFiles = Math.max(1, job.totalFiles || (20 + Math.floor(Math.random() * 150)));
+            const failedFiles = 0;
             return {
               ...job,
-              status: 'running',
-              progress: next,
-              totalFiles: job.totalFiles || (20 + Math.floor(Math.random() * 150)),
-              extractedFiles: Math.floor(((job.totalFiles || 100) * next) / 100)
+              progress: 100,
+              status: 'completed',
+              completedAt: new Date().toISOString(),
+              totalFiles,
+              extractedFiles: totalFiles,
+              failedFiles,
+              message: 'Unzip completed successfully.'
             };
           }
-          return job;
-        });
-        if (changed) writeJobs(jobs);
-        return jobs;
-      }
-
-      async function apiFetch(path, options = {}) {
-        const url = String(config.apiBaseUrl).replace(/\/$/, '') + path;
-        const response = await fetch(url, {
-          headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
-          ...options
-        });
-        if (!response.ok) {
-          const text = await response.text();
-          throw new Error(text || `Request failed with status ${response.status}`);
+          return {
+            ...job,
+            status: 'running',
+            progress: next,
+            totalFiles: job.totalFiles || (20 + Math.floor(Math.random() * 150)),
+            extractedFiles: Math.floor(((job.totalFiles || 100) * next) / 100)
+          };
         }
-        return response.json();
+        return job;
+      });
+      if (changed) writeJobs(jobs);
+      return jobs;
+    }
+
+    function normalizeStatus(runtimeStatus) {
+      if (runtimeStatus === 'Pending') return 'queued';
+      if (runtimeStatus === 'Running') return 'running';
+      if (runtimeStatus === 'Completed') return 'completed';
+      if (runtimeStatus === 'Failed' || runtimeStatus === 'Terminated') return 'failed';
+      return 'queued';
+    }
+
+    function normalizeJob(saved, apiData = {}) {
+      const customStatus = apiData.customStatus || {};
+      const output = apiData.output || {};
+      const input = apiData.input || saved.input || {};
+      const runtimeStatus = apiData.runtimeStatus || saved.runtimeStatus || 'Pending';
+
+      return {
+        id: apiData.instanceId || saved.id,
+        statusQueryGetUri: saved.statusQueryGetUri,
+        terminatePostUri: saved.terminatePostUri,
+        purgeHistoryDeleteUri: saved.purgeHistoryDeleteUri,
+        source_unc: input.source_unc || saved.source_unc || '',
+        destination_unc: input.destination_unc || saved.destination_unc || '',
+        zipFile: saved.zipFile || basename(input.source_unc || saved.source_unc || ''),
+        status: normalizeStatus(runtimeStatus),
+        runtimeStatus,
+        progress: Number(customStatus.progress ?? (runtimeStatus === 'Completed' ? 100 : runtimeStatus === 'Pending' ? 0 : 10)),
+        totalFiles: Number(output.totalFiles ?? customStatus.totalFiles ?? saved.totalFiles ?? 0),
+        extractedFiles: Number(output.uploaded ?? customStatus.uploaded ?? saved.extractedFiles ?? 0),
+        failedFiles: Number(output.failed ?? customStatus.failed ?? saved.failedFiles ?? 0),
+        message: customStatus.message || output.message || saved.message || '',
+        error: apiData.failureDetails ? JSON.stringify(apiData.failureDetails) : (saved.error || null),
+        createdAt: apiData.createdTime || saved.createdAt,
+        startedAt: saved.startedAt || null,
+        completedAt: runtimeStatus === 'Completed' ? (output.completedAt || apiData.lastUpdatedTime || saved.completedAt) : saved.completedAt,
+        lastUpdatedTime: apiData.lastUpdatedTime || saved.lastUpdatedTime,
+        input,
+        raw: apiData
+      };
+    }
+
+    async function apiFetch(path, options = {}) {
+      const url = String(config.apiBaseUrl).replace(/\/$/, '') + path;
+      const response = await fetch(url, {
+        headers: { ...apiHeaders(), ...(options.headers || {}) },
+        ...options
+      });
+
+      const text = await response.text();
+      let data = {};
+      try {
+        data = text ? JSON.parse(text) : {};
+      } catch {
+        data = { raw: text };
       }
 
-      async function loadJobs() {
-        try {
-          if (isApiMode) {
-            const payload = await apiFetch('/api/jobs');
-            state.jobs = Array.isArray(payload) ? payload : (payload.jobs || []);
-          } else {
-            state.jobs = simulateJobs(readJobs());
-          }
-          render();
-          setLastRefresh();
-        } catch (error) {
-          showMessage(error.message || 'Failed to load jobs.', 'error');
+      if (!response.ok) {
+        throw new Error(data.error || data.message || text || `Request failed with status ${response.status}`);
+      }
+
+      return data;
+    }
+
+    async function loadJobs() {
+      try {
+        if (isApiMode) {
+          const savedJobs = readJobs();
+          const refreshed = await Promise.all(savedJobs.map(async (job) => {
+            try {
+              const url = job.statusQueryGetUri
+                ? withFunctionKey(job.statusQueryGetUri)
+                : String(config.apiBaseUrl).replace(/\/$/, '') + `/api/jobs/${encodeURIComponent(job.id)}`;
+
+              const response = await fetch(url, {
+                headers: job.statusQueryGetUri ? {} : apiHeaders()
+              });
+
+              const text = await response.text();
+              let data = {};
+              try {
+                data = text ? JSON.parse(text) : {};
+              } catch {
+                data = {};
+              }
+
+              if (!response.ok) {
+                return { ...job, message: `Status refresh failed (${response.status})` };
+              }
+
+              return normalizeJob(job, data);
+            } catch (err) {
+              return { ...job, message: `Status refresh failed: ${err.message}` };
+            }
+          }));
+
+          writeJobs(refreshed);
+          state.jobs = refreshed;
+        } else {
+          state.jobs = simulateJobs(readJobs());
         }
+
+        render();
+        setLastRefresh();
+      } catch (error) {
+        showMessage(error.message || 'Failed to load jobs.', 'error');
       }
+    }
 
-      function setLastRefresh() {
-        el.lastRefresh.textContent = 'Last refreshed: ' + new Date().toLocaleString();
+    function setLastRefresh() {
+      el.lastRefresh.textContent = 'Last refreshed: ' + new Date().toLocaleString();
+    }
+
+    function showMessage(message, type = 'success') {
+      el.submitMessage.textContent = message;
+      el.submitMessage.className = `message ${type}`;
+      el.submitMessage.classList.remove('hidden');
+    }
+
+    function clearMessage() {
+      el.submitMessage.className = 'message hidden';
+      el.submitMessage.textContent = '';
+    }
+
+    function validateUNC(value, fieldName) {
+      if (!/^\\\\[^\\]+\\[^\\]+/.test(value.trim())) {
+        throw new Error(`${fieldName} must be a valid UNC path like \\\\server\\share\\path`);
       }
+    }
 
-      function showMessage(message, type = 'success') {
-        el.submitMessage.textContent = message;
-        el.submitMessage.className = `message ${type}`;
-        el.submitMessage.classList.remove('hidden');
-      }
+    async function submitJob(event) {
+      event.preventDefault();
+      clearMessage();
+      el.submitBtn.disabled = true;
+      el.submitLoader.classList.remove('hidden');
 
-      function clearMessage() {
-        el.submitMessage.className = 'message hidden';
-        el.submitMessage.textContent = '';
-      }
+      try {
+        const source_unc = el.source.value.trim();
+        const destination_unc = el.destination.value.trim();
+        validateUNC(source_unc, 'Source UNC');
+        validateUNC(destination_unc, 'Destination UNC');
 
-      function validateUNC(value, fieldName) {
-        if (!/^\\\\[^\\]+\\[^\\]+/.test(value.trim())) {
-          throw new Error(`${fieldName} must be a valid UNC path like \\\\server\\share\\path`);
-        }
-      }
+        const payload = {
+          source_unc,
+          destination_unc,
+          zip_password: el.password.value,
+          overwrite: el.overwrite.checked
+        };
 
-      async function submitJob(event) {
-        event.preventDefault();
-        clearMessage();
-        el.submitBtn.disabled = true;
-        el.submitLoader.classList.remove('hidden');
+        if (isApiMode) {
+          const result = await apiFetch('/api/jobs', {
+            method: 'POST',
+            body: JSON.stringify(payload)
+          });
 
-        try {
-          const source_unc = el.source.value.trim();
-          const destination_unc = el.destination.value.trim();
-          validateUNC(source_unc, 'Source UNC');
-          validateUNC(destination_unc, 'Destination UNC');
-
-          const payload = {
+          const jobs = readJobs();
+          const job = normalizeJob({
+            id: result.instanceId || result.id,
+            statusQueryGetUri: result.statusQueryGetUri,
+            terminatePostUri: result.terminatePostUri,
+            purgeHistoryDeleteUri: result.purgeHistoryDeleteUri,
             source_unc,
             destination_unc,
-            zip_password: el.password.value,
-            overwrite: el.overwrite.checked
-          };
-
-          if (isApiMode) {
-            await apiFetch('/api/jobs', { method: 'POST', body: JSON.stringify(payload) });
-          } else {
-            const jobs = readJobs();
-            const job = {
-              id: crypto.randomUUID ? crypto.randomUUID() : 'job-' + Date.now(),
-              source_unc,
-              destination_unc,
-              zipFile: basename(source_unc),
-              overwrite: payload.overwrite,
-              hasPassword: Boolean(payload.zip_password),
-              status: 'queued',
-              progress: 0,
-              totalFiles: 0,
-              extractedFiles: 0,
-              failedFiles: 0,
-              message: 'Job submitted in static website mode.',
-              createdAt: new Date().toISOString(),
-              startedAt: null,
-              completedAt: null,
-              error: null
-            };
-            jobs.unshift(job);
-            writeJobs(jobs);
-          }
-
-          el.form.reset();
-          el.overwrite.checked = true;
-          showMessage(isApiMode ? 'Job submitted successfully.' : 'Job added locally. Connect an API to run real unzip operations.', 'success');
-          await loadJobs();
-        } catch (error) {
-          showMessage(error.message || 'Failed to submit job.', 'error');
-        } finally {
-          el.submitBtn.disabled = false;
-          el.submitLoader.classList.add('hidden');
-        }
-      }
-
-      function filteredJobs() {
-        const q = state.search.trim().toLowerCase();
-        return state.jobs.filter(job => {
-          const statusMatch = !state.filterStatus || job.status === state.filterStatus;
-          const haystack = [job.id, job.zipFile, job.source_unc, job.destination_unc, job.status].join(' ').toLowerCase();
-          const searchMatch = !q || haystack.includes(q);
-          return statusMatch && searchMatch;
-        });
-      }
-
-      function renderStats() {
-        const totals = state.jobs.reduce((acc, job) => {
-          acc.total += 1;
-          if (acc[job.status] !== undefined) acc[job.status] += 1;
-          return acc;
-        }, { total: 0, queued: 0, running: 0, completed: 0, failed: 0 });
-
-        el.statTotal.textContent = totals.total;
-        el.statQueued.textContent = totals.queued;
-        el.statRunning.textContent = totals.running;
-        el.statCompleted.textContent = totals.completed;
-        el.statFailed.textContent = totals.failed;
-      }
-
-      function render() {
-        renderStats();
-        const jobs = filteredJobs();
-        if (!jobs.length) {
-          el.jobsBody.innerHTML = '<tr><td colspan="8" class="empty-row">No jobs match the current filters.</td></tr>';
-          return;
-        }
-
-        el.jobsBody.innerHTML = jobs.map(job => {
-          const progress = Math.max(0, Math.min(100, Number(job.progress || 0)));
-          return `
-            <tr>
-              <td>
-                <div class="job-title mono">${escapeHtml(job.id || '—')}</div>
-                <div class="job-meta">${escapeHtml(job.source_unc || '')}</div>
-              </td>
-              <td><span class="status-pill status-${escapeHtml(job.status || 'queued')}">${escapeHtml(job.status || 'queued')}</span></td>
-              <td>
-                <div class="progress-shell"><div class="progress-bar" style="width:${progress}%"></div></div>
-                <div class="tiny">${progress}%</div>
-              </td>
-              <td>
-                <div>${escapeHtml(job.zipFile || basename(job.source_unc || ''))}</div>
-                <div class="tiny mono">${escapeHtml(job.destination_unc || '')}</div>
-              </td>
-              <td>
-                <div class="tiny">Created: ${escapeHtml(formatDate(job.createdAt))}</div>
-                <div class="tiny">Started: ${escapeHtml(formatDate(job.startedAt))}</div>
-                <div class="tiny">Ended: ${escapeHtml(formatDate(job.completedAt))}</div>
-              </td>
-              <td>
-                <div class="tiny">Total: ${escapeHtml(job.totalFiles ?? 0)}</div>
-                <div class="tiny">Extracted: ${escapeHtml(job.extractedFiles ?? 0)}</div>
-                <div class="tiny">Failed: ${escapeHtml(job.failedFiles ?? 0)}</div>
-              </td>
-              <td>${escapeHtml(durationText(job))}</td>
-              <td><button type="button" class="secondary-btn icon-btn" data-details="${escapeHtml(job.id)}">Details</button></td>
-            </tr>`;
-        }).join('');
-
-        document.querySelectorAll('[data-details]').forEach(button => {
-          button.addEventListener('click', () => openDetails(button.getAttribute('data-details')));
-        });
-      }
-
-      function openDetails(jobId) {
-        const job = state.jobs.find(item => String(item.id) === String(jobId));
-        if (!job) return;
-
-        el.modalTitle.textContent = `Job Details · ${job.id}`;
-        el.modalBody.innerHTML = `
-          <div class="detail-grid">
-            <div class="detail-card"><div class="detail-label">Status</div><div><span class="status-pill status-${escapeHtml(job.status)}">${escapeHtml(job.status)}</span></div></div>
-            <div class="detail-card"><div class="detail-label">Progress</div><div>${escapeHtml(job.progress ?? 0)}%</div></div>
-            <div class="detail-card full"><div class="detail-label">Source UNC</div><div class="mono">${escapeHtml(job.source_unc || '—')}</div></div>
-            <div class="detail-card full"><div class="detail-label">Destination UNC</div><div class="mono">${escapeHtml(job.destination_unc || '—')}</div></div>
-            <div class="detail-card"><div class="detail-label">Created</div><div>${escapeHtml(formatDate(job.createdAt))}</div></div>
-            <div class="detail-card"><div class="detail-label">Duration</div><div>${escapeHtml(durationText(job))}</div></div>
-            <div class="detail-card"><div class="detail-label">Extracted Files</div><div>${escapeHtml(job.extractedFiles ?? 0)}</div></div>
-            <div class="detail-card"><div class="detail-label">Failed Files</div><div>${escapeHtml(job.failedFiles ?? 0)}</div></div>
-            <div class="detail-card full"><div class="detail-label">Message</div><div>${escapeHtml(job.message || '—')}</div></div>
-            <div class="detail-card full"><div class="detail-label">Error</div><div>${escapeHtml(job.error || 'None')}</div></div>
-          </div>`;
-
-        el.detailsModal.classList.remove('hidden');
-        el.detailsModal.setAttribute('aria-hidden', 'false');
-      }
-
-      function closeDetails() {
-        el.detailsModal.classList.add('hidden');
-        el.detailsModal.setAttribute('aria-hidden', 'true');
-      }
-
-      async function clearFinished() {
-        if (isApiMode) {
-          showMessage('Wire this button to your API delete/archive endpoint if you want server-side cleanup.', 'error');
-          return;
-        }
-        const remaining = readJobs().filter(job => !['completed', 'failed'].includes(job.status));
-        writeJobs(remaining);
-        await loadJobs();
-      }
-
-      function bindEvents() {
-        el.form.addEventListener('submit', submitJob);
-        el.refreshBtn.addEventListener('click', loadJobs);
-        el.clearFinishedBtn.addEventListener('click', clearFinished);
-        el.searchBox.addEventListener('input', (e) => { state.search = e.target.value; render(); });
-        document.querySelectorAll('.filter-btn').forEach(btn => {
-          btn.addEventListener('click', () => {
-            document.querySelectorAll('.filter-btn').forEach(x => x.classList.remove('active'));
-            btn.classList.add('active');
-            state.filterStatus = btn.dataset.status || '';
-            render();
+            zipFile: basename(source_unc),
+            status: 'queued',
+            runtimeStatus: 'Pending',
+            progress: 0,
+            totalFiles: 0,
+            extractedFiles: 0,
+            failedFiles: 0,
+            message: result.message || 'Orchestration started.',
+            createdAt: new Date().toISOString(),
+            startedAt: null,
+            completedAt: null,
+            error: null,
+            input: payload
           });
-        });
-        el.closeModalBtn.addEventListener('click', closeDetails);
-        el.modalOverlay.addEventListener('click', closeDetails);
-        document.addEventListener('keydown', (e) => {
-          if (e.key === 'Escape') closeDetails();
-        });
+
+          jobs.unshift(job);
+          writeJobs(jobs);
+        } else {
+          const jobs = readJobs();
+          const job = {
+            id: crypto.randomUUID ? crypto.randomUUID() : 'job-' + Date.now(),
+            source_unc,
+            destination_unc,
+            zipFile: basename(source_unc),
+            overwrite: payload.overwrite,
+            hasPassword: Boolean(payload.zip_password),
+            status: 'queued',
+            progress: 0,
+            totalFiles: 0,
+            extractedFiles: 0,
+            failedFiles: 0,
+            message: 'Job submitted in static website mode.',
+            createdAt: new Date().toISOString(),
+            startedAt: null,
+            completedAt: null,
+            error: null
+          };
+          jobs.unshift(job);
+          writeJobs(jobs);
+        }
+
+        el.form.reset();
+        el.overwrite.checked = true;
+        showMessage(isApiMode ? 'Job submitted successfully.' : 'Job added locally. Connect an API to run real unzip operations.', 'success');
+        await loadJobs();
+      } catch (error) {
+        showMessage(error.message || 'Failed to submit job.', 'error');
+      } finally {
+        el.submitBtn.disabled = false;
+        el.submitLoader.classList.add('hidden');
+      }
+    }
+
+    function filteredJobs() {
+      const q = state.search.trim().toLowerCase();
+      return state.jobs.filter(job => {
+        const statusMatch = !state.filterStatus || job.status === state.filterStatus;
+        const haystack = [job.id, job.zipFile, job.source_unc, job.destination_unc, job.status, job.runtimeStatus || ''].join(' ').toLowerCase();
+        const searchMatch = !q || haystack.includes(q);
+        return statusMatch && searchMatch;
+      });
+    }
+
+    function renderStats() {
+      const totals = state.jobs.reduce((acc, job) => {
+        acc.total += 1;
+        if (acc[job.status] !== undefined) acc[job.status] += 1;
+        return acc;
+      }, { total: 0, queued: 0, running: 0, completed: 0, failed: 0 });
+
+      el.statTotal.textContent = totals.total;
+      el.statQueued.textContent = totals.queued;
+      el.statRunning.textContent = totals.running;
+      el.statCompleted.textContent = totals.completed;
+      el.statFailed.textContent = totals.failed;
+    }
+
+    function render() {
+      renderStats();
+      const jobs = filteredJobs();
+      if (!jobs.length) {
+        el.jobsBody.innerHTML = '<tr><td colspan="8" class="empty-row">No jobs match the current filters.</td></tr>';
+        return;
       }
 
-      bindEvents();
-      loadJobs();
-      state.refreshTimer = window.setInterval(loadJobs, Number(config.refreshMs || 8000));
-    })();
-  </script>
-</body>
-</html>
+      el.jobsBody.innerHTML = jobs.map(job => {
+        const progress = Math.max(0, Math.min(100, Number(job.progress || 0)));
+        return `
+          <tr>
+            <td>
+              <div class="job-title mono">${escapeHtml(job.id || '—')}</div>
+              <div class="job-meta">${escapeHtml(job.source_unc || '')}</div>
+            </td>
+            <td>
+              <span class="status-pill status-${escapeHtml(job.status || 'queued')}">${escapeHtml(job.status || 'queued')}</span>
+              <div class="tiny">${escapeHtml(job.runtimeStatus || '')}</div>
+            </td>
+            <td>
+              <div class="progress-shell"><div class="progress-bar" style="width:${progress}%"></div></div>
+              <div class="tiny">${progress}%</div>
+            </td>
+            <td>
+              <div>${escapeHtml(job.zipFile || basename(job.source_unc || ''))}</div>
+              <div class="tiny mono">${escapeHtml(job.destination_unc || '')}</div>
+            </td>
+            <td>
+              <div class="tiny">Created: ${escapeHtml(formatDate(job.createdAt))}</div>
+              <div class="tiny">Started: ${escapeHtml(formatDate(job.startedAt))}</div>
+              <div class="tiny">Ended: ${escapeHtml(formatDate(job.completedAt))}</div>
+            </td>
+            <td>
+              <div class="tiny">Total: ${escapeHtml(job.totalFiles ?? 0)}</div>
+              <div class="tiny">Extracted: ${escapeHtml(job.extractedFiles ?? 0)}</div>
+              <div class="tiny">Failed: ${escapeHtml(job.failedFiles ?? 0)}</div>
+            </td>
+            <td>${escapeHtml(durationText(job))}</td>
+            <td><button type="button" class="secondary-btn icon-btn" data-details="${escapeHtml(job.id)}">Details</button></td>
+          </tr>`;
+      }).join('');
+
+      document.querySelectorAll('[data-details]').forEach(button => {
+        button.addEventListener('click', () => openDetails(button.getAttribute('data-details')));
+      });
+    }
+
+    function openDetails(jobId) {
+      const job = state.jobs.find(item => String(item.id) === String(jobId));
+      if (!job) return;
+
+      el.modalTitle.textContent = `Job Details · ${job.id}`;
+      el.modalBody.innerHTML = `
+        <div class="detail-grid">
+          <div class="detail-card"><div class="detail-label">Status</div><div><span class="status-pill status-${escapeHtml(job.status)}">${escapeHtml(job.status)}</span></div></div>
+          <div class="detail-card"><div class="detail-label">Runtime Status</div><div>${escapeHtml(job.runtimeStatus || '—')}</div></div>
+          <div class="detail-card full"><div class="detail-label">Source UNC</div><div class="mono">${escapeHtml(job.source_unc || '—')}</div></div>
+          <div class="detail-card full"><div class="detail-label">Destination UNC</div><div class="mono">${escapeHtml(job.destination_unc || '—')}</div></div>
+          <div class="detail-card"><div class="detail-label">Created</div><div>${escapeHtml(formatDate(job.createdAt))}</div></div>
+          <div class="detail-card"><div class="detail-label">Last Updated</div><div>${escapeHtml(formatDate(job.lastUpdatedTime))}</div></div>
+          <div class="detail-card"><div class="detail-label">Duration</div><div>${escapeHtml(durationText(job))}</div></div>
+          <div class="detail-card"><div class="detail-label">Progress</div><div>${escapeHtml(job.progress ?? 0)}%</div></div>
+          <div class="detail-card"><div class="detail-label">Extracted Files</div><div>${escapeHtml(job.extractedFiles ?? 0)}</div></div>
+          <div class="detail-card"><div class="detail-label">Failed Files</div><div>${escapeHtml(job.failedFiles ?? 0)}</div></div>
+          <div class="detail-card full"><div class="detail-label">Message</div><div>${escapeHtml(job.message || '—')}</div></div>
+          <div class="detail-card full"><div class="detail-label">Error</div><div>${escapeHtml(job.error || 'None')}</div></div>
+        </div>`;
+
+      el.detailsModal.classList.remove('hidden');
+      el.detailsModal.setAttribute('aria-hidden', 'false');
+    }
+
+    function closeDetails() {
+      el.detailsModal.classList.add('hidden');
+      el.detailsModal.setAttribute('aria-hidden', 'true');
+    }
+
+    async function clearFinished() {
+      const remaining = readJobs().filter(job => !['completed', 'failed'].includes(job.status));
+      writeJobs(remaining);
+      await loadJobs();
+    }
+
+    function bindEvents() {
+      el.form.addEventListener('submit', submitJob);
+      el.refreshBtn.addEventListener('click', loadJobs);
+      el.clearFinishedBtn.addEventListener('click', clearFinished);
+      el.searchBox.addEventListener('input', (e) => { state.search = e.target.value; render(); });
+      document.querySelectorAll('.filter-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('.filter-btn').forEach(x => x.classList.remove('active'));
+          btn.classList.add('active');
+          state.filterStatus = btn.dataset.status || '';
+          render();
+        });
+      });
+      el.closeModalBtn.addEventListener('click', closeDetails);
+      el.modalOverlay.addEventListener('click', closeDetails);
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') closeDetails();
+      });
+    }
+
+    bindEvents();
+    loadJobs();
+    state.refreshTimer = window.setInterval(loadJobs, Number(config.refreshMs || 8000));
+  })();
+</script>
