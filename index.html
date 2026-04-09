@@ -34,10 +34,8 @@
     padding: 32px 24px 64px;
   }
 
-  /* ── Layout ── */
   .shell { max-width: 1100px; margin: 0 auto; display: grid; gap: 24px; }
 
-  /* ── Header ── */
   .header {
     display: flex;
     align-items: flex-end;
@@ -65,7 +63,6 @@
     white-space: nowrap;
   }
 
-  /* ── Card ── */
   .card {
     background: var(--surface);
     border: 1px solid var(--border);
@@ -82,7 +79,6 @@
   .card-head h2 { font-family: var(--sans); font-size: 15px; font-weight: 600; color: #fff; }
   .card-body { padding: 22px; }
 
-  /* ── Form ── */
   .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
   .form-group { display: grid; gap: 6px; }
   .form-group.full { grid-column: 1 / -1; }
@@ -119,7 +115,6 @@
 
   .form-actions { display: flex; align-items: center; gap: 12px; margin-top: 4px; }
 
-  /* ── Buttons ── */
   btn, .btn {
     display: inline-flex;
     align-items: center;
@@ -149,7 +144,6 @@
   }
   @keyframes spin { to { transform: rotate(360deg); } }
 
-  /* ── Alert ── */
   .alert {
     padding: 11px 14px;
     border-radius: 7px;
@@ -162,7 +156,6 @@
   .alert-success { background: rgba(34,201,128,.08); border-color: rgba(34,201,128,.3); color: #a0f0ce; }
   .alert-error   { background: rgba(240,79,106,.08); border-color: rgba(240,79,106,.3); color: #ffb0be; }
 
-  /* ── Stats ── */
   .stats { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; }
   .stat {
     background: var(--bg);
@@ -175,7 +168,6 @@
   .stat-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .1em; }
   .stat-value { font-family: var(--sans); font-size: 26px; font-weight: 800; color: #fff; }
 
-  /* ── Toolbar ── */
   .toolbar { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
   .toolbar-search {
     flex: 1;
@@ -205,7 +197,6 @@
   }
   .filter-btn.active { border-color: var(--accent); color: var(--accent); background: rgba(77,159,255,.08); }
 
-  /* ── Table ── */
   .table-wrap { overflow-x: auto; }
   table { width: 100%; border-collapse: collapse; min-width: 900px; }
   th {
@@ -229,7 +220,6 @@
   tr:hover td { background: rgba(77,159,255,.03); }
   .empty-row td { text-align: center; color: var(--muted); padding: 40px; }
 
-  /* ── Status pill ── */
   .pill {
     display: inline-flex;
     align-items: center;
@@ -252,15 +242,12 @@
   .pill-failed    .pill-dot { background: var(--danger); }
   @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .4; } }
 
-  /* ── Progress bar ── */
   .prog-wrap { width: 120px; height: 5px; background: var(--border); border-radius: 99px; overflow: hidden; }
   .prog-bar  { height: 100%; background: var(--accent); border-radius: 99px; transition: width .4s; }
 
-  /* ── Muted text ── */
   .dim { color: var(--muted); font-size: 11px; }
   .mono { font-family: var(--mono); }
 
-  /* ── Modal ── */
   .modal-overlay {
     position: fixed; inset: 0; z-index: 100;
     background: rgba(4,8,18,.75);
@@ -323,7 +310,6 @@
 <body>
 <div class="shell">
 
-  <!-- Header -->
   <header class="header">
     <div class="header-left">
       <h1>ZIP Unzip Portal</h1>
@@ -332,7 +318,6 @@
     <span id="apiBadge" class="api-badge">connecting…</span>
   </header>
 
-  <!-- Submit form -->
   <div class="card">
     <div class="card-head">
       <h2>Submit Job</h2>
@@ -371,7 +356,6 @@
     </div>
   </div>
 
-  <!-- Jobs -->
   <div class="card">
     <div class="card-head" style="justify-content:space-between; flex-wrap:wrap; gap:12px;">
       <h2>Jobs</h2>
@@ -419,7 +403,6 @@
 
 </div>
 
-<!-- Modal -->
 <div class="modal-overlay" id="modalOverlay">
   <div class="modal">
     <div class="modal-head">
@@ -431,22 +414,20 @@
 </div>
 
 <script>
-// ─── Config ───────────────────────────────────────────────────────────────
 window.APP_CONFIG = window.APP_CONFIG || {
-  apiBaseUrl: "test-unzip-a7fmdddddrendmg4.centralus-01.azurewebsites.net",   // Set to your Function App URL e.g. https://my-app.azurewebsites.net
+  apiBaseUrl: "https://test-unzip-a7fmdddddrendmg4.centralus-01.azurewebsites.net",
   refreshMs: 8000,
   storageKey: "unzip-portal-jobs-v2",
 };
 
-// ─── State ────────────────────────────────────────────────────────────────
 const state = { jobs: [], filter: "", search: "" };
 
-// ─── DOM refs ─────────────────────────────────────────────────────────────
 const $ = id => document.getElementById(id);
 const el = {
   form: $("jobForm"),
   source: $("sourceUnc"),
   dest: $("destUnc"),
+  zipPassword: $("zipPassword"),
   overwrite: $("overwrite"),
   submitBtn: $("submitBtn"),
   submitSpinner: $("submitSpinner"),
@@ -460,27 +441,36 @@ const el = {
   modalClose: $("modalClose"),
   modalTitle: $("modalTitle"),
   modalBody: $("modalBody"),
-  sTotal: $("sTotal"), sQueued: $("sQueued"),
-  sRunning: $("sRunning"), sDone: $("sDone"), sFailed: $("sFailed"),
+  sTotal: $("sTotal"),
+  sQueued: $("sQueued"),
+  sRunning: $("sRunning"),
+  sDone: $("sDone"),
+  sFailed: $("sFailed"),
 };
 
 const cfg = window.APP_CONFIG;
-const isLive = Boolean(cfg.apiBaseUrl && cfg.apiBaseUrl.trim());
+const apiBaseUrl = String(cfg.apiBaseUrl || "").trim();
+const isLive = /^https?:\/\//i.test(apiBaseUrl);
 
 el.apiBadge.textContent = isLive ? "API connected" : "static / demo mode";
 el.apiBadge.style.borderColor = isLive ? "rgba(34,201,128,.35)" : "rgba(240,168,50,.35)";
 el.apiBadge.style.background  = isLive ? "rgba(34,201,128,.08)" : "rgba(240,168,50,.08)";
 el.apiBadge.style.color       = isLive ? "#80f0c0" : "#ffd080";
 
-// ─── Storage ──────────────────────────────────────────────────────────────
-function loadJobs()  { try { return JSON.parse(localStorage.getItem(cfg.storageKey) || "[]"); } catch { return []; } }
-function saveJobs(j) { localStorage.setItem(cfg.storageKey, JSON.stringify(j)); }
+function loadJobs() {
+  try { return JSON.parse(localStorage.getItem(cfg.storageKey) || "[]"); }
+  catch { return []; }
+}
+function saveJobs(jobs) {
+  localStorage.setItem(cfg.storageKey, JSON.stringify(jobs));
+}
 
-// ─── Helpers ──────────────────────────────────────────────────────────────
 function esc(s) {
   return String(s ?? "")
-    .replace(/&/g,"&amp;").replace(/</g,"&lt;")
-    .replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+    .replace(/&/g,"&amp;")
+    .replace(/</g,"&lt;")
+    .replace(/>/g,"&gt;")
+    .replace(/"/g,"&quot;");
 }
 function fmt(iso) {
   if (!iso) return "—";
@@ -491,27 +481,47 @@ function basename(unc) {
   const parts = String(unc || "").replace(/\\/g,"/").split("/").filter(Boolean);
   return parts.at(-1) || "unknown.zip";
 }
-function normaliseStatus(rs) {
-  if (!rs) return "queued";
-  const r = rs.toLowerCase();
-  if (r === "pending") return "queued";
-  if (r === "running") return "running";
-  if (r === "completed") return "completed";
+function normaliseStatus(runtimeStatus, output) {
+  const rs = String(runtimeStatus || "").toLowerCase();
+
+  if (rs === "pending") return "queued";
+  if (rs === "running") return "running";
+  if (rs === "completed") {
+    const outStatus = String(output?.status || "").toLowerCase();
+    if (outStatus.includes("error") || outStatus.includes("failed")) return "failed";
+    return "completed";
+  }
   return "failed";
 }
+function stageFromApi(api, saved) {
+  const cs = api.customStatus || {};
+  const out = api.output || {};
+  return cs.stage || out.stage || saved.stage || "";
+}
+function progressFromApi(api, saved) {
+  const cs = api.customStatus || {};
+  if (typeof cs.progress === "number") return cs.progress;
+  if (String(api.runtimeStatus || "").toLowerCase() === "completed") return 100;
+  return saved.progress ?? 0;
+}
 
-// ─── API ──────────────────────────────────────────────────────────────────
 async function apiFetch(path, opts = {}) {
-  const url = cfg.apiBaseUrl.replace(/\/$/, "") + path;
-  const res = await fetch(url, { headers: { "Content-Type": "application/json" }, ...opts });
+  const url = apiBaseUrl.replace(/\/$/, "") + path;
+  const res = await fetch(url, {
+    headers: { "Content-Type": "application/json" },
+    ...opts,
+  });
+
   const text = await res.text();
   let data = {};
   try { data = text ? JSON.parse(text) : {}; } catch {}
-  if (!res.ok) throw new Error(data.error || data.message || `HTTP ${res.status}`);
+
+  if (!res.ok) {
+    throw new Error(data.error || data.message || `HTTP ${res.status}`);
+  }
   return data;
 }
 
-// ─── Refresh ──────────────────────────────────────────────────────────────
 async function refresh() {
   let jobs = loadJobs();
 
@@ -519,8 +529,7 @@ async function refresh() {
     jobs = await Promise.all(jobs.map(async job => {
       if (["completed", "failed"].includes(job.status)) return job;
       try {
-        const statusUrl = job.statusQueryGetUri
-          || `${cfg.apiBaseUrl.replace(/\/$/, "")}/api/jobs/${job.id}`;
+        const statusUrl = job.statusQueryGetUri || `${apiBaseUrl.replace(/\/$/, "")}/api/jobs/${job.id}`;
         const res = await fetch(statusUrl);
         const data = await res.json();
         return mergeApiData(job, data);
@@ -530,7 +539,6 @@ async function refresh() {
     }));
     saveJobs(jobs);
   } else {
-    // Simulate progress in demo mode
     let changed = false;
     jobs = jobs.map(job => {
       if (job.status === "queued" && Date.now() - new Date(job.createdAt) > 3000) {
@@ -540,7 +548,9 @@ async function refresh() {
       if (job.status === "running") {
         changed = true;
         const p = Math.min(100, (job.progress || 10) + Math.floor(Math.random() * 20));
-        if (p >= 100) return { ...job, status: "completed", progress: 100, totalFiles: 42, uploaded: 42 };
+        if (p >= 100) {
+          return { ...job, status: "completed", progress: 100, totalFiles: 42, uploaded: 42 };
+        }
         return { ...job, progress: p };
       }
       return job;
@@ -558,19 +568,18 @@ function mergeApiData(saved, api) {
   return {
     ...saved,
     runtimeStatus: api.runtimeStatus,
-    status: normaliseStatus(api.runtimeStatus),
-    progress: cs.progress ?? (api.runtimeStatus === "Completed" ? 100 : saved.progress ?? 0),
-    stage: cs.stage || saved.stage,
+    status: normaliseStatus(api.runtimeStatus, out),
+    progress: progressFromApi(api, saved),
+    stage: stageFromApi(api, saved),
     totalFiles: out.totalFiles ?? cs.fileCount ?? saved.totalFiles ?? 0,
     uploaded: out.uploaded ?? saved.uploaded ?? 0,
     failed: out.failed ?? saved.failed ?? 0,
     lastUpdatedTime: api.lastUpdatedTime || saved.lastUpdatedTime,
-    output: api.output || saved.output,
-    customStatus: api.customStatus || saved.customStatus,
+    output: out || saved.output,
+    customStatus: cs || saved.customStatus,
   };
 }
 
-// ─── Submit ───────────────────────────────────────────────────────────────
 el.form.addEventListener("submit", async e => {
   e.preventDefault();
   clearAlert();
@@ -579,6 +588,7 @@ el.form.addEventListener("submit", async e => {
 
   const source_unc = el.source.value.trim();
   const destination_unc = el.dest.value.trim();
+  const zip_password = el.zipPassword.value.trim();
   const overwrite = el.overwrite.checked;
 
   try {
@@ -589,8 +599,14 @@ el.form.addEventListener("submit", async e => {
     if (isLive) {
       const result = await apiFetch("/api/jobs", {
         method: "POST",
-        body: JSON.stringify({ source_unc, destination_unc, overwrite, zip_password }),
+        body: JSON.stringify({
+          source_unc,
+          destination_unc,
+          overwrite,
+          zip_password: zip_password || null
+        }),
       });
+
       job = {
         id: result.instanceId,
         statusQueryGetUri: result.statusQueryGetUri,
@@ -609,7 +625,8 @@ el.form.addEventListener("submit", async e => {
     } else {
       job = {
         id: crypto.randomUUID(),
-        source_unc, destination_unc,
+        source_unc,
+        destination_unc,
         zipFile: basename(source_unc),
         status: "queued",
         progress: 0,
@@ -635,18 +652,19 @@ el.form.addEventListener("submit", async e => {
   }
 });
 
-// ─── Render ───────────────────────────────────────────────────────────────
 function render() {
   const q = state.search.trim().toLowerCase();
-  const filtered = state.jobs.filter(j => {
-    const statusOk = !state.filter || j.status === state.filter;
-    const searchOk = !q || [j.id, j.zipFile, j.source_unc, j.destination_unc, j.status].join(" ").toLowerCase().includes(q);
+  const filtered = state.jobs.filter(job => {
+    const statusOk = !state.filter || job.status === state.filter;
+    const searchOk = !q || [job.id, job.zipFile, job.source_unc, job.destination_unc, job.status].join(" ").toLowerCase().includes(q);
     return statusOk && searchOk;
   });
 
-  // Stats
-  const counts = { queued:0, running:0, completed:0, failed:0 };
-  state.jobs.forEach(j => { if (counts[j.status] !== undefined) counts[j.status]++; });
+  const counts = { queued: 0, running: 0, completed: 0, failed: 0 };
+  state.jobs.forEach(job => {
+    if (counts[job.status] !== undefined) counts[job.status]++;
+  });
+
   el.sTotal.textContent = state.jobs.length;
   el.sQueued.textContent = counts.queued;
   el.sRunning.textContent = counts.running;
@@ -659,7 +677,7 @@ function render() {
   }
 
   el.jobsBody.innerHTML = filtered.map(job => {
-    const p = Math.max(0, Math.min(100, job.progress || 0));
+    const p = Math.max(0, Math.min(100, Number(job.progress || 0)));
     const statusClass = `pill-${job.status || "queued"}`;
     return `<tr>
       <td><div class="mono dim" style="font-size:11px">${esc(job.id)}</div></td>
@@ -682,40 +700,80 @@ function render() {
   }).join("");
 }
 
-// ─── Modal ────────────────────────────────────────────────────────────────
 function openModal(id) {
   const job = state.jobs.find(j => j.id === id);
   if (!job) return;
-  el.modalTitle.textContent = `Job · ${job.id.slice(0,12)}…`;
+
+  el.modalTitle.textContent = `Job · ${job.id.slice(0, 12)}…`;
   const cs = job.customStatus || {};
   const out = job.output || {};
+
   el.modalBody.innerHTML = `
     <div class="detail-grid">
-      <div class="detail-block"><div class="detail-key">Status</div><div class="detail-val"><span class="pill pill-${job.status}"><span class="pill-dot"></span>${esc(job.status)}</span></div></div>
-      <div class="detail-block"><div class="detail-key">Runtime status</div><div class="detail-val">${esc(job.runtimeStatus || "—")}</div></div>
-      <div class="detail-block full"><div class="detail-key">Instance ID</div><div class="detail-val mono">${esc(job.id)}</div></div>
-      <div class="detail-block full"><div class="detail-key">Source UNC</div><div class="detail-val mono">${esc(job.source_unc || "—")}</div></div>
-      <div class="detail-block full"><div class="detail-key">Destination UNC</div><div class="detail-val mono">${esc(job.destination_unc || "—")}</div></div>
-      <div class="detail-block"><div class="detail-key">Created</div><div class="detail-val">${fmt(job.createdAt)}</div></div>
-      <div class="detail-block"><div class="detail-key">Last updated</div><div class="detail-val">${fmt(job.lastUpdatedTime)}</div></div>
-      <div class="detail-block"><div class="detail-key">Progress</div><div class="detail-val">${job.progress ?? 0}% · stage: ${esc(job.stage || cs.stage || "—")}</div></div>
-      <div class="detail-block"><div class="detail-key">Files</div><div class="detail-val">${job.uploaded ?? 0} uploaded · ${job.failed ?? 0} failed · ${job.totalFiles ?? 0} total</div></div>
+      <div class="detail-block">
+        <div class="detail-key">Status</div>
+        <div class="detail-val"><span class="pill pill-${job.status}"><span class="pill-dot"></span>${esc(job.status)}</span></div>
+      </div>
+      <div class="detail-block">
+        <div class="detail-key">Runtime status</div>
+        <div class="detail-val">${esc(job.runtimeStatus || "—")}</div>
+      </div>
+      <div class="detail-block full">
+        <div class="detail-key">Instance ID</div>
+        <div class="detail-val mono">${esc(job.id)}</div>
+      </div>
+      <div class="detail-block full">
+        <div class="detail-key">Source UNC</div>
+        <div class="detail-val mono">${esc(job.source_unc || "—")}</div>
+      </div>
+      <div class="detail-block full">
+        <div class="detail-key">Destination UNC</div>
+        <div class="detail-val mono">${esc(job.destination_unc || "—")}</div>
+      </div>
+      <div class="detail-block">
+        <div class="detail-key">Created</div>
+        <div class="detail-val">${fmt(job.createdAt)}</div>
+      </div>
+      <div class="detail-block">
+        <div class="detail-key">Last updated</div>
+        <div class="detail-val">${fmt(job.lastUpdatedTime)}</div>
+      </div>
+      <div class="detail-block">
+        <div class="detail-key">Progress</div>
+        <div class="detail-val">${job.progress ?? 0}% · stage: ${esc(job.stage || cs.stage || "—")}</div>
+      </div>
+      <div class="detail-block">
+        <div class="detail-key">Files</div>
+        <div class="detail-val">${job.uploaded ?? 0} uploaded · ${job.failed ?? 0} failed · ${job.totalFiles ?? 0} total</div>
+      </div>
+      ${out.status ? `<div class="detail-block"><div class="detail-key">Output status</div><div class="detail-val">${esc(out.status)}</div></div>` : ""}
+      ${out.message ? `<div class="detail-block"><div class="detail-key">Output message</div><div class="detail-val">${esc(out.message)}</div></div>` : ""}
       ${out.failures?.length ? `<div class="detail-block full"><div class="detail-key">Failures (first ${Math.min(out.failures.length, 10)})</div><div class="detail-val mono dim">${out.failures.slice(0,10).map(f => esc(f.path + ": " + f.error)).join("<br>")}</div></div>` : ""}
     </div>`;
   el.modalOverlay.classList.add("open");
 }
-function closeModal() { el.modalOverlay.classList.remove("open"); }
-el.modalClose.addEventListener("click", closeModal);
-el.modalOverlay.addEventListener("click", e => { if (e.target === el.modalOverlay) closeModal(); });
-document.addEventListener("keydown", e => { if (e.key === "Escape") closeModal(); });
 
-// ─── Misc controls ────────────────────────────────────────────────────────
+function closeModal() {
+  el.modalOverlay.classList.remove("open");
+}
+
+el.modalClose.addEventListener("click", closeModal);
+el.modalOverlay.addEventListener("click", e => {
+  if (e.target === el.modalOverlay) closeModal();
+});
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape") closeModal();
+});
+
 el.refreshBtn.addEventListener("click", refresh);
 el.clearBtn.addEventListener("click", () => {
-  saveJobs(loadJobs().filter(j => !["completed","failed"].includes(j.status)));
+  saveJobs(loadJobs().filter(j => !["completed", "failed"].includes(j.status)));
   refresh();
 });
-el.search.addEventListener("input", e => { state.search = e.target.value; render(); });
+el.search.addEventListener("input", e => {
+  state.search = e.target.value;
+  render();
+});
 document.querySelectorAll(".filter-btn").forEach(btn => {
   btn.addEventListener("click", () => {
     document.querySelectorAll(".filter-btn").forEach(b => b.classList.remove("active"));
@@ -729,9 +787,11 @@ function showAlert(msg, type) {
   el.submitAlert.textContent = msg;
   el.submitAlert.className = `alert alert-${type} show`;
 }
-function clearAlert() { el.submitAlert.className = "alert"; }
+function clearAlert() {
+  el.submitAlert.className = "alert";
+  el.submitAlert.textContent = "";
+}
 
-// ─── Boot ─────────────────────────────────────────────────────────────────
 refresh();
 setInterval(refresh, cfg.refreshMs || 8000);
 </script>
