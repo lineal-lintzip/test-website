@@ -1,1282 +1,739 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Azure ZIP Unzip Portal</title>
-  <style>
-    :root {
-      --bg: #0b1220;
-      --panel: #111a2e;
-      --panel-2: #16233d;
-      --line: #243453;
-      --text: #e8eefc;
-      --muted: #9eb0d1;
-      --accent: #67b3ff;
-      --accent-2: #2f7de1;
-      --success: #18b26b;
-      --warning: #f2a93b;
-      --danger: #e85d75;
-      --shadow: 0 20px 50px rgba(0, 0, 0, 0.28);
-      --radius: 18px;
-    }
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ZIP Unzip Portal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Syne:wght@600;800&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg:       #080e1a;
+    --surface:  #0d1625;
+    --border:   #1a2840;
+    --accent:   #4d9fff;
+    --accent2:  #1a6fd4;
+    --success:  #22c980;
+    --warning:  #f0a832;
+    --danger:   #f04f6a;
+    --text:     #dce8ff;
+    --muted:    #6a84aa;
+    --mono:     'JetBrains Mono', monospace;
+    --sans:     'Syne', sans-serif;
+    --r:        10px;
+  }
 
-    * { box-sizing: border-box; }
-    html, body { margin: 0; padding: 0; }
-    body {
-      font-family: Inter, Segoe UI, Roboto, Arial, sans-serif;
-      background: linear-gradient(180deg, #0a1020 0%, #0f1830 100%);
-      color: var(--text);
-      min-height: 100vh;
-    }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-    .page-shell { width: 100%; padding: 28px; }
-    .page { max-width: 1320px; margin: 0 auto; display: grid; gap: 24px; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 13px;
+    min-height: 100vh;
+    padding: 32px 24px 64px;
+  }
 
-    .card {
-      background: rgba(17, 26, 46, 0.95);
-      border: 1px solid var(--line);
-      border-radius: var(--radius);
-      box-shadow: var(--shadow);
-      overflow: hidden;
-    }
+  /* ── Layout ── */
+  .shell { max-width: 1100px; margin: 0 auto; display: grid; gap: 24px; }
 
-    .hero {
-      display: flex;
-      justify-content: space-between;
-      gap: 20px;
-      align-items: flex-start;
-      padding: 28px;
-      background: linear-gradient(135deg, rgba(103,179,255,0.18), rgba(47,125,225,0.05));
-      border: 1px solid var(--line);
-      border-radius: var(--radius);
-      box-shadow: var(--shadow);
-    }
+  /* ── Header ── */
+  .header {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 16px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--border);
+  }
+  .header-left h1 {
+    font-family: var(--sans);
+    font-size: clamp(22px, 4vw, 36px);
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    color: #fff;
+    line-height: 1;
+  }
+  .header-left p { color: var(--muted); margin-top: 6px; font-size: 12px; }
+  .api-badge {
+    font-size: 11px;
+    padding: 4px 10px;
+    border-radius: 99px;
+    background: rgba(77,159,255,0.1);
+    border: 1px solid rgba(77,159,255,0.25);
+    color: var(--accent);
+    white-space: nowrap;
+  }
 
-    .eyebrow {
-      text-transform: uppercase;
-      letter-spacing: 0.12em;
-      color: var(--accent);
-      font-size: 12px;
-      font-weight: 700;
-      margin-bottom: 10px;
-    }
+  /* ── Card ── */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r);
+    overflow: hidden;
+  }
+  .card-head {
+    padding: 18px 22px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .card-head h2 { font-family: var(--sans); font-size: 15px; font-weight: 600; color: #fff; }
+  .card-body { padding: 22px; }
 
-    h1, h2, h3, p { margin-top: 0; }
-    h1 { font-size: clamp(28px, 4vw, 42px); margin-bottom: 12px; }
-    h2 { font-size: 24px; margin-bottom: 8px; }
-    h3 { font-size: 20px; margin-bottom: 8px; }
-    p, label, input, button, span, td, th { font-size: 14px; }
-    .section-subtitle, .modal-subtitle, .hero-copy p, .refresh-time, .refresh-label { color: var(--muted); }
+  /* ── Form ── */
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .form-group { display: grid; gap: 6px; }
+  .form-group.full { grid-column: 1 / -1; }
+  label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; }
+  input[type=text] {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 11px 13px;
+    border-radius: 7px;
+    font-family: var(--mono);
+    font-size: 12px;
+    outline: none;
+    transition: border-color .15s;
+  }
+  input[type=text]:focus { border-color: var(--accent); }
+  input::placeholder { color: #3a5070; }
 
-    .hero-side, .refresh-box { min-width: 220px; }
+  .checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 11px 13px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    cursor: pointer;
+    font-size: 12px;
+    color: var(--text);
+    user-select: none;
+  }
+  input[type=checkbox] { accent-color: var(--accent); width: 14px; height: 14px; }
 
-    .refresh-box, .callout {
-      background: rgba(8, 14, 26, 0.55);
-      border: 1px solid var(--line);
-      border-radius: 14px;
-      padding: 14px 16px;
-      display: grid;
-      gap: 6px;
-    }
+  .form-actions { display: flex; align-items: center; gap: 12px; margin-top: 4px; }
 
-    .callout {
-      margin: 20px 28px 0;
-      background: rgba(242, 169, 59, 0.08);
-      border-color: rgba(242, 169, 59, 0.3);
-    }
-    .callout.info {
-      background: rgba(103, 179, 255, 0.08);
-      border-color: rgba(103, 179, 255, 0.3);
-    }
-    .callout strong { color: #ffd28a; }
-    .callout.info strong { color: #a8d4ff; }
+  /* ── Buttons ── */
+  btn, .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border: none;
+    border-radius: 7px;
+    padding: 10px 18px;
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity .15s, transform .1s;
+  }
+  .btn:hover { opacity: .85; transform: translateY(-1px); }
+  .btn:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+  .btn-primary { background: var(--accent); color: #000; }
+  .btn-ghost { background: transparent; color: var(--muted); border: 1px solid var(--border); }
+  .btn-ghost:hover { color: var(--text); }
+  .btn-danger { background: transparent; color: #f08090; border: 1px solid rgba(240,80,106,.3); }
 
-    .card-header { padding: 24px 28px 0; }
+  .spinner {
+    width: 14px; height: 14px;
+    border: 2px solid rgba(0,0,0,.2);
+    border-top-color: #000;
+    border-radius: 50%;
+    animation: spin .7s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
 
-    .form-grid {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 18px;
-      padding: 20px 28px 28px;
-    }
+  /* ── Alert ── */
+  .alert {
+    padding: 11px 14px;
+    border-radius: 7px;
+    font-size: 12px;
+    border: 1px solid;
+    margin-top: 16px;
+    display: none;
+  }
+  .alert.show { display: block; }
+  .alert-success { background: rgba(34,201,128,.08); border-color: rgba(34,201,128,.3); color: #a0f0ce; }
+  .alert-error   { background: rgba(240,79,106,.08); border-color: rgba(240,79,106,.3); color: #ffb0be; }
 
-    .form-group { display: grid; gap: 8px; }
-    .full-width { grid-column: 1 / -1; }
+  /* ── Stats ── */
+  .stats { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; }
+  .stat {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px;
+    display: grid;
+    gap: 6px;
+  }
+  .stat-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .1em; }
+  .stat-value { font-family: var(--sans); font-size: 26px; font-weight: 800; color: #fff; }
 
-    label { color: #c7d6f2; font-weight: 600; }
+  /* ── Toolbar ── */
+  .toolbar { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+  .toolbar-search {
+    flex: 1;
+    min-width: 200px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 9px 13px;
+    border-radius: 7px;
+    font-family: var(--mono);
+    font-size: 12px;
+    outline: none;
+  }
+  .toolbar-search:focus { border-color: var(--accent); }
 
-    input[type="text"], input[type="password"] {
-      width: 100%;
-      border: 1px solid var(--line);
-      background: #0d1527;
-      color: var(--text);
-      padding: 13px 14px;
-      border-radius: 12px;
-      outline: none;
-    }
+  .filter-group { display: flex; gap: 4px; }
+  .filter-btn {
+    padding: 7px 12px;
+    font-family: var(--mono);
+    font-size: 11px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    transition: all .15s;
+  }
+  .filter-btn.active { border-color: var(--accent); color: var(--accent); background: rgba(77,159,255,.08); }
 
-    input::placeholder { color: #7183a9; }
-    input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(103,179,255,0.14); }
+  /* ── Table ── */
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; min-width: 900px; }
+  th {
+    text-align: left;
+    padding: 10px 16px;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: .1em;
+    color: var(--muted);
+    border-bottom: 1px solid var(--border);
+    background: rgba(255,255,255,.015);
+    white-space: nowrap;
+  }
+  td {
+    padding: 14px 16px;
+    border-bottom: 1px solid rgba(26,40,64,.6);
+    vertical-align: middle;
+    font-size: 12px;
+  }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: rgba(77,159,255,.03); }
+  .empty-row td { text-align: center; color: var(--muted); padding: 40px; }
 
-    .checkbox-group { align-self: end; }
-    .checkbox-label {
-      display: inline-flex;
-      align-items: center;
-      gap: 10px;
-      padding: 13px 14px;
-      border: 1px solid var(--line);
-      border-radius: 12px;
-      min-height: 48px;
-      background: #0d1527;
-      font-weight: 500;
-    }
+  /* ── Status pill ── */
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 99px;
+    font-size: 11px;
+    font-weight: 600;
+    border: 1px solid;
+    text-transform: lowercase;
+  }
+  .pill-dot { width: 6px; height: 6px; border-radius: 50%; }
+  .pill-queued    { color: #8bbfff; border-color: rgba(77,159,255,.3); background: rgba(77,159,255,.08); }
+  .pill-queued    .pill-dot { background: #4d9fff; }
+  .pill-running   { color: #ffd080; border-color: rgba(240,168,50,.3); background: rgba(240,168,50,.08); }
+  .pill-running   .pill-dot { background: var(--warning); animation: pulse 1s infinite; }
+  .pill-completed { color: #80f0c0; border-color: rgba(34,201,128,.3); background: rgba(34,201,128,.08); }
+  .pill-completed .pill-dot { background: var(--success); }
+  .pill-failed    { color: #ffb0be; border-color: rgba(240,79,106,.3); background: rgba(240,79,106,.08); }
+  .pill-failed    .pill-dot { background: var(--danger); }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .4; } }
 
-    .form-actions, .toolbar, .toolbar-actions, .filter-group, .jobs-header {
-      display: flex;
-      gap: 12px;
-      flex-wrap: wrap;
-      align-items: center;
-    }
+  /* ── Progress bar ── */
+  .prog-wrap { width: 120px; height: 5px; background: var(--border); border-radius: 99px; overflow: hidden; }
+  .prog-bar  { height: 100%; background: var(--accent); border-radius: 99px; transition: width .4s; }
 
-    .jobs-header {
-      justify-content: space-between;
-      padding-bottom: 18px;
-    }
+  /* ── Muted text ── */
+  .dim { color: var(--muted); font-size: 11px; }
+  .mono { font-family: var(--mono); }
 
-    button {
-      border: 0;
-      border-radius: 12px;
-      padding: 12px 16px;
-      font-weight: 700;
-      cursor: pointer;
-      transition: transform 0.15s ease, opacity 0.15s ease, background 0.15s ease;
-    }
-    button:hover { transform: translateY(-1px); }
-    button:disabled { opacity: 0.7; cursor: not-allowed; transform: none; }
+  /* ── Modal ── */
+  .modal-overlay {
+    position: fixed; inset: 0; z-index: 100;
+    background: rgba(4,8,18,.75);
+    backdrop-filter: blur(4px);
+    display: none;
+    place-items: center;
+    padding: 20px;
+  }
+  .modal-overlay.open { display: grid; }
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    width: min(860px, 100%);
+    max-height: 85vh;
+    overflow: auto;
+    box-shadow: 0 30px 80px rgba(0,0,0,.5);
+  }
+  .modal-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 18px 22px;
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    background: var(--surface);
+  }
+  .modal-head h3 { font-family: var(--sans); font-size: 15px; font-weight: 600; color: #fff; }
+  .modal-close {
+    background: none;
+    border: none;
+    color: var(--muted);
+    font-size: 20px;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 4px;
+    line-height: 1;
+  }
+  .modal-close:hover { color: var(--text); }
+  .modal-body { padding: 22px; display: grid; gap: 12px; }
+  .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .detail-block {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px;
+  }
+  .detail-block.full { grid-column: 1 / -1; }
+  .detail-key { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .1em; margin-bottom: 6px; }
+  .detail-val { font-size: 12px; word-break: break-all; }
 
-    .primary-btn {
-      background: linear-gradient(135deg, var(--accent), var(--accent-2));
-      color: white;
-    }
-
-    .secondary-btn, .filter-btn {
-      background: #16233b;
-      color: var(--text);
-      border: 1px solid var(--line);
-    }
-
-    .filter-btn.active { border-color: var(--accent); color: white; background: #1d3154; }
-    .danger-lite { border-color: rgba(232, 93, 117, 0.35); color: #ffc7d0; }
-    .danger-btn {
-      background: rgba(232, 93, 117, 0.15);
-      border: 1px solid rgba(232, 93, 117, 0.35);
-      color: #ffc7d0;
-    }
-    .danger-btn:hover { background: rgba(232, 93, 117, 0.25); }
-
-    .warn-btn {
-      background: rgba(242, 169, 59, 0.12);
-      border: 1px solid rgba(242, 169, 59, 0.3);
-      color: #ffd58c;
-    }
-    .warn-btn:hover { background: rgba(242, 169, 59, 0.22); }
-
-    .search-input {
-      min-width: min(100%, 360px);
-      flex: 1 1 280px;
-    }
-
-    .loader {
-      width: 18px;
-      height: 18px;
-      border: 2px solid rgba(255,255,255,0.25);
-      border-top-color: white;
-      border-radius: 50%;
-      animation: spin 0.8s linear infinite;
-      flex-shrink: 0;
-    }
-    .hidden { display: none !important; }
-    @keyframes spin { to { transform: rotate(360deg); } }
-
-    .message {
-      margin: 0 28px 28px;
-      padding: 14px 16px;
-      border-radius: 12px;
-      border: 1px solid transparent;
-    }
-    .message.success { background: rgba(24,178,107,0.1); border-color: rgba(24,178,107,0.35); color: #b7f5d6; }
-    .message.error { background: rgba(232,93,117,0.1); border-color: rgba(232,93,117,0.35); color: #ffc8d0; }
-
-    .stats-grid {
-      display: grid;
-      grid-template-columns: repeat(5, minmax(0, 1fr));
-      gap: 14px;
-      padding: 0 28px 22px;
-    }
-
-    .stat-tile {
-      background: #0d1527;
-      border: 1px solid var(--line);
-      border-radius: 14px;
-      padding: 16px;
-      display: grid;
-      gap: 8px;
-    }
-
-    .stat-label { color: var(--muted); }
-    .stat-value { font-size: 26px; font-weight: 800; }
-
-    .table-wrapper { overflow-x: auto; padding: 0 0 12px; }
-    table { width: 100%; border-collapse: collapse; min-width: 1100px; }
-
-    th, td {
-      text-align: left;
-      padding: 16px 18px;
-      border-top: 1px solid var(--line);
-      vertical-align: top;
-    }
-
-    th {
-      color: #c7d6f2;
-      font-size: 12px;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      background: rgba(255,255,255,0.02);
-    }
-
-    .empty-row { text-align: center; color: var(--muted); padding: 38px 18px; }
-    .job-title { font-weight: 800; }
-    .job-meta, .tiny { color: var(--muted); font-size: 12px; }
-
-    .status-pill {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 7px 10px;
-      border-radius: 999px;
-      font-size: 12px;
-      font-weight: 800;
-      text-transform: capitalize;
-      border: 1px solid transparent;
-    }
-
-    .status-queued { background: rgba(103,179,255,0.12); color: #bdddff; border-color: rgba(103,179,255,0.28); }
-    .status-running { background: rgba(242,169,59,0.12); color: #ffd58c; border-color: rgba(242,169,59,0.28); }
-    .status-completed { background: rgba(24,178,107,0.12); color: #b7f5d6; border-color: rgba(24,178,107,0.28); }
-    .status-failed { background: rgba(232,93,117,0.12); color: #ffc7d0; border-color: rgba(232,93,117,0.28); }
-    .status-terminated { background: rgba(232,93,117,0.12); color: #ffc7d0; border-color: rgba(232,93,117,0.28); }
-
-    .progress-shell {
-      width: 180px;
-      max-width: 100%;
-      height: 10px;
-      background: #0c1322;
-      border-radius: 999px;
-      overflow: hidden;
-      border: 1px solid var(--line);
-      margin-bottom: 8px;
-    }
-    .progress-bar {
-      height: 100%;
-      background: linear-gradient(90deg, var(--accent), var(--accent-2));
-      transition: width 0.4s ease;
-    }
-
-    .icon-btn { padding: 9px 12px; font-size: 13px; }
-    .action-group { display: flex; gap: 6px; flex-wrap: wrap; }
-
-    .mono {
-      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-      word-break: break-word;
-    }
-
-    /* Modal */
-    .modal {
-      position: fixed;
-      inset: 0;
-      z-index: 50;
-      display: grid;
-      place-items: center;
-      padding: 20px;
-    }
-    .modal-overlay {
-      position: absolute;
-      inset: 0;
-      background: rgba(3, 7, 18, 0.72);
-      backdrop-filter: blur(4px);
-    }
-    .modal-content {
-      position: relative;
-      width: min(920px, 100%);
-      max-height: 88vh;
-      overflow: auto;
-      background: #10192d;
-      border: 1px solid var(--line);
-      border-radius: 20px;
-      box-shadow: var(--shadow);
-    }
-    .modal-header, .modal-body { padding: 24px 26px; }
-    .modal-header {
-      display: flex;
-      justify-content: space-between;
-      gap: 16px;
-      align-items: flex-start;
-      border-bottom: 1px solid var(--line);
-    }
-    .modal-header-actions {
-      display: flex;
-      gap: 10px;
-      align-items: center;
-      flex-shrink: 0;
-    }
-    .close-btn {
-      background: transparent;
-      color: white;
-      font-size: 28px;
-      line-height: 1;
-      padding: 0;
-    }
-
-    .detail-grid {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 14px;
-      margin-bottom: 20px;
-    }
-    .detail-card {
-      background: #0d1527;
-      border: 1px solid var(--line);
-      border-radius: 14px;
-      padding: 16px;
-    }
-    .detail-card.full { grid-column: 1 / -1; }
-    .detail-label { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .08em; margin-bottom: 8px; }
-
-    .modal-actions-section {
-      border-top: 1px solid var(--line);
-      padding-top: 20px;
-      margin-top: 4px;
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-      align-items: center;
-    }
-    .modal-actions-label {
-      color: var(--muted);
-      font-size: 12px;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      flex-basis: 100%;
-    }
-
-    /* Confirm dialog */
-    .confirm-overlay {
-      position: fixed;
-      inset: 0;
-      z-index: 100;
-      display: grid;
-      place-items: center;
-      padding: 20px;
-      background: rgba(3, 7, 18, 0.82);
-      backdrop-filter: blur(6px);
-    }
-    .confirm-box {
-      background: #10192d;
-      border: 1px solid var(--line);
-      border-radius: 18px;
-      padding: 28px;
-      max-width: 420px;
-      width: 100%;
-      box-shadow: var(--shadow);
-    }
-    .confirm-box h4 { margin: 0 0 10px; font-size: 18px; }
-    .confirm-box p { color: var(--muted); margin: 0 0 22px; }
-    .confirm-actions { display: flex; gap: 10px; justify-content: flex-end; }
-
-    @media (max-width: 980px) {
-      .hero, .jobs-header { flex-direction: column; }
-      .stats-grid, .form-grid, .detail-grid { grid-template-columns: 1fr; }
-      .hero-side, .refresh-box { width: 100%; }
-    }
-  </style>
+  @media (max-width: 700px) {
+    .form-row, .stats, .detail-grid { grid-template-columns: 1fr; }
+    .form-group.full { grid-column: 1; }
+    .detail-block.full { grid-column: 1; }
+  }
+</style>
 </head>
 <body>
-  <div class="page-shell">
-    <div class="page">
+<div class="shell">
 
-      <header class="hero">
-        <div class="hero-copy">
-          <div class="eyebrow">Azure File Share Operations</div>
-          <h1>Azure ZIP Unzip Portal</h1>
-          <p>Submit unzip tasks, monitor progress, inspect failures, and review job history from a single self-contained page.</p>
-        </div>
-        <div class="hero-side">
-          <div class="refresh-box">
-            <span class="refresh-label">Portal Refresh</span>
-            <span id="lastRefresh" class="refresh-time">Last refreshed: Never</span>
+  <!-- Header -->
+  <header class="header">
+    <div class="header-left">
+      <h1>ZIP Unzip Portal</h1>
+      <p>Azure Files · Durable Functions</p>
+    </div>
+    <span id="apiBadge" class="api-badge">connecting…</span>
+  </header>
+
+  <!-- Submit form -->
+  <div class="card">
+    <div class="card-head">
+      <h2>Submit Job</h2>
+    </div>
+    <div class="card-body">
+      <form id="jobForm">
+        <div class="form-row">
+          <div class="form-group full">
+            <label>Source UNC — ZIP file path</label>
+            <input type="text" id="sourceUnc" placeholder="\\storageaccount.file.core.windows.net\share\folder\archive.zip" required />
           </div>
-        </div>
-      </header>
-
-      <section class="card form-card">
-        <div class="callout" id="modeBanner">
-          <strong>Connecting…</strong>
-          <span>Checking API configuration.</span>
-        </div>
-
-        <div class="card-header">
-          <div>
-            <h2>Submit New Task</h2>
-            <p class="section-subtitle">Provide source and destination Azure Files UNC paths, then start the unzip job.</p>
+          <div class="form-group full">
+            <label>Destination UNC — output folder</label>
+            <input type="text" id="destUnc" placeholder="\\storageaccount.file.core.windows.net\share\output-folder" required />
           </div>
-        </div>
-
-        <form id="jobForm" class="form-grid">
-          <div class="form-group full-width">
-            <label for="source_unc">Source UNC</label>
-            <input type="text" id="source_unc" placeholder="\\storageaccount.file.core.windows.net\share\file.zip" required />
-          </div>
-
-          <div class="form-group full-width">
-            <label for="destination_unc">Destination UNC</label>
-            <input type="text" id="destination_unc" placeholder="\\storageaccount.file.core.windows.net\share\folder" required />
-          </div>
-
           <div class="form-group">
-            <label for="zip_password">ZIP Password (optional)</label>
-            <input type="password" id="zip_password" placeholder="Enter password if ZIP is protected" />
+            <label>ZIP Password (optional)</label>
+            <input type="text" id="zipPassword" placeholder="Leave blank if no password" />
           </div>
-
-          <div class="form-group checkbox-group">
+          <div class="form-group">
+            <label>&nbsp;</label>
             <label class="checkbox-label">
               <input type="checkbox" id="overwrite" checked />
-              <span>Overwrite existing files</span>
+              Overwrite existing files
             </label>
           </div>
-
-          <div class="form-actions full-width">
-            <button type="submit" id="submitBtn" class="primary-btn">Start Unzip</button>
-            <span id="submitLoader" class="loader hidden"></span>
-          </div>
-        </form>
-
-        <div id="submitMessage" class="message hidden"></div>
-      </section>
-
-      <section class="card jobs-card">
-        <div class="card-header jobs-header">
-          <div>
-            <h2>Jobs</h2>
-            <p class="section-subtitle">Live queue and history of submitted unzip jobs.</p>
-          </div>
-
-          <div class="toolbar">
-            <input type="text" id="searchBox" class="search-input" placeholder="Search by job ID, ZIP file, source, destination" />
-
-            <div class="filter-group">
-              <button type="button" class="filter-btn active" data-status="">All</button>
-              <button type="button" class="filter-btn" data-status="queued">Queued</button>
-              <button type="button" class="filter-btn" data-status="running">Running</button>
-              <button type="button" class="filter-btn" data-status="completed">Completed</button>
-              <button type="button" class="filter-btn" data-status="failed">Failed</button>
-            </div>
-
-            <div class="toolbar-actions">
-              <button type="button" id="refreshBtn" class="secondary-btn">Refresh</button>
-              <button type="button" id="clearFinishedBtn" class="secondary-btn danger-lite">Clear Finished</button>
-            </div>
-          </div>
         </div>
-
-        <div class="stats-grid">
-          <div class="stat-tile"><span class="stat-label">Total</span><span class="stat-value" id="statTotal">0</span></div>
-          <div class="stat-tile"><span class="stat-label">Queued</span><span class="stat-value" id="statQueued">0</span></div>
-          <div class="stat-tile"><span class="stat-label">Running</span><span class="stat-value" id="statRunning">0</span></div>
-          <div class="stat-tile"><span class="stat-label">Completed</span><span class="stat-value" id="statCompleted">0</span></div>
-          <div class="stat-tile"><span class="stat-label">Failed</span><span class="stat-value" id="statFailed">0</span></div>
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary" id="submitBtn">
+            <span id="submitSpinner" class="spinner" style="display:none"></span>
+            Start Unzip
+          </button>
         </div>
-
-        <div class="table-wrapper">
-          <table id="jobsTable">
-            <thead>
-              <tr>
-                <th>Job</th>
-                <th>Status</th>
-                <th>Progress</th>
-                <th>ZIP File</th>
-                <th>Timeline</th>
-                <th>Counts</th>
-                <th>Duration</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody id="jobsBody">
-              <tr><td colspan="8" class="empty-row">Loading jobs…</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </section>
+        <div class="alert" id="submitAlert"></div>
+      </form>
     </div>
   </div>
 
-  <!-- Details Modal -->
-  <div id="detailsModal" class="modal hidden" aria-hidden="true">
-    <div class="modal-overlay" id="modalOverlay"></div>
-    <div class="modal-content" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
-      <div class="modal-header">
-        <div>
-          <h3 id="modalTitle">Job Details</h3>
-          <p class="modal-subtitle">Detailed status, counters, and backend error information.</p>
+  <!-- Jobs -->
+  <div class="card">
+    <div class="card-head" style="justify-content:space-between; flex-wrap:wrap; gap:12px;">
+      <h2>Jobs</h2>
+      <div class="toolbar">
+        <input type="text" id="search" class="toolbar-search" placeholder="Search jobs…" />
+        <div class="filter-group">
+          <button class="filter-btn active" data-f="">All</button>
+          <button class="filter-btn" data-f="queued">Queued</button>
+          <button class="filter-btn" data-f="running">Running</button>
+          <button class="filter-btn" data-f="completed">Done</button>
+          <button class="filter-btn" data-f="failed">Failed</button>
         </div>
-        <div class="modal-header-actions">
-          <button type="button" id="closeModalBtn" class="close-btn" aria-label="Close modal">&times;</button>
-        </div>
-      </div>
-      <div id="modalBody" class="modal-body"></div>
-    </div>
-  </div>
-
-  <!-- Confirm Dialog -->
-  <div id="confirmOverlay" class="confirm-overlay hidden" aria-hidden="true">
-    <div class="confirm-box">
-      <h4 id="confirmTitle">Are you sure?</h4>
-      <p id="confirmMessage">This action cannot be undone.</p>
-      <div class="confirm-actions">
-        <button type="button" id="confirmCancelBtn" class="secondary-btn">Cancel</button>
-        <button type="button" id="confirmOkBtn" class="danger-btn">Confirm</button>
+        <button class="btn btn-ghost" id="refreshBtn">Refresh</button>
+        <button class="btn btn-danger" id="clearBtn">Clear finished</button>
       </div>
     </div>
-  </div>
-
-  <!-- ── Configuration ── -->
-  <script>
-    window.APP_CONFIG = window.APP_CONFIG || {
-      apiBaseUrl: "https://test-unzip-a7fmdddddrendmg4.centralus-01.azurewebsites.net",
-      refreshMs: 8000,
-      storageKey: "azure-unzip-durable-jobs"
-    };
-  </script>
-
-  <!-- ── Application ── -->
-  <script>
-  (() => {
-    const config = window.APP_CONFIG || {};
-    const STORAGE_KEY = config.storageKey || 'azure-unzip-durable-jobs';
-
-    const state = {
-      jobs: [],
-      filterStatus: "",
-      search: "",
-      refreshTimer: null,
-      activeModalJobId: null,
-    };
-
-    const el = {
-      form:             document.getElementById('jobForm'),
-      source:           document.getElementById('source_unc'),
-      destination:      document.getElementById('destination_unc'),
-      password:         document.getElementById('zip_password'),
-      overwrite:        document.getElementById('overwrite'),
-      submitBtn:        document.getElementById('submitBtn'),
-      submitLoader:     document.getElementById('submitLoader'),
-      submitMessage:    document.getElementById('submitMessage'),
-      jobsBody:         document.getElementById('jobsBody'),
-      refreshBtn:       document.getElementById('refreshBtn'),
-      clearFinishedBtn: document.getElementById('clearFinishedBtn'),
-      searchBox:        document.getElementById('searchBox'),
-      lastRefresh:      document.getElementById('lastRefresh'),
-      modeBanner:       document.getElementById('modeBanner'),
-      detailsModal:     document.getElementById('detailsModal'),
-      modalOverlay:     document.getElementById('modalOverlay'),
-      closeModalBtn:    document.getElementById('closeModalBtn'),
-      modalBody:        document.getElementById('modalBody'),
-      modalTitle:       document.getElementById('modalTitle'),
-      statTotal:        document.getElementById('statTotal'),
-      statQueued:       document.getElementById('statQueued'),
-      statRunning:      document.getElementById('statRunning'),
-      statCompleted:    document.getElementById('statCompleted'),
-      statFailed:       document.getElementById('statFailed'),
-      confirmOverlay:   document.getElementById('confirmOverlay'),
-      confirmTitle:     document.getElementById('confirmTitle'),
-      confirmMessage:   document.getElementById('confirmMessage'),
-      confirmOkBtn:     document.getElementById('confirmOkBtn'),
-      confirmCancelBtn: document.getElementById('confirmCancelBtn'),
-    };
-
-    // ── Helpers ─────────────────────────────────────────────────────────────
-function escapeHtml(value) {
-      return String(value ?? '')
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#39;');
-    }
-
-    function isApiMode() {
-      return Boolean(config.apiBaseUrl && String(config.apiBaseUrl).trim());
-    }
-
-    function apiHeaders() {
-      return { 'Content-Type': 'application/json' };
-    }
-
-    function apiUrl(path) {
-      return String(config.apiBaseUrl).replace(/\/$/, '') + path;
-    }
-
-    function basename(path) {
-      const clean = String(path || '').replace(/\\+/g, '/');
-      const parts = clean.split('/').filter(Boolean);
-      return parts[parts.length - 1] || 'unknown.zip';
-    }
-
-    function formatDate(value) {
-      if (!value) return '—';
-      const d = new Date(value);
-      if (Number.isNaN(d.getTime())) return '—';
-      return d.toLocaleString();
-    }
-
-    function durationText(job) {
-      if (!job.createdAt) return '—';
-      const start = new Date(job.createdAt).getTime();
-      const end = job.completedAt ? new Date(job.completedAt).getTime() : Date.now();
-      const seconds = Math.max(0, Math.floor((end - start) / 1000));
-      const mins = Math.floor(seconds / 60);
-      const secs = seconds % 60;
-      return mins > 0 ? `${mins}m ${secs}s` : `${secs}s`;
-    }
-
-    // ── Storage ──────────────────────────────────────────────────────────────
-
-    function readJobs() {
-      try {
-        const raw = localStorage.getItem(STORAGE_KEY);
-        return raw ? JSON.parse(raw) : [];
-      } catch { return []; }
-    }
-
-    function writeJobs(jobs) {
-      try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(jobs));
-      } catch { /* quota exceeded – ignore */ }
-    }
-
-    // ── Job normalisation ────────────────────────────────────────────────────
-
-    function normalizeStatus(runtimeStatus) {
-      const map = {
-        Pending: 'queued',
-        Running: 'running',
-        Completed: 'completed',
-        Failed: 'failed',
-        Terminated: 'terminated',
-        ContinuedAsNew: 'running',
-      };
-      return map[runtimeStatus] || 'queued';
-    }
-
-    function normalizeJob(saved, apiData = {}) {
-      const customStatus = apiData.customStatus || {};
-      const output       = apiData.output || {};
-      const input        = apiData.input  || saved.input || {};
-      const runtimeStatus = apiData.runtimeStatus || saved.runtimeStatus || 'Pending';
-
-      return {
-        id:                   apiData.instanceId    || saved.id,
-        statusQueryGetUri:    saved.statusQueryGetUri    || null,
-        terminatePostUri:     saved.terminatePostUri     || null,
-        purgeHistoryDeleteUri: saved.purgeHistoryDeleteUri || null,
-        source_unc:           input.source_unc      || saved.source_unc      || '',
-        destination_unc:      input.destination_unc || saved.destination_unc || '',
-        zipFile:              saved.zipFile          || basename(input.source_unc || saved.source_unc || ''),
-        status:               normalizeStatus(runtimeStatus),
-        runtimeStatus,
-        progress:      Number(customStatus.progress  ?? (runtimeStatus === 'Completed' ? 100 : runtimeStatus === 'Pending' ? 0 : 10)),
-        totalFiles:    Number(output.totalFiles      ?? customStatus.totalFiles  ?? saved.totalFiles    ?? 0),
-        extractedFiles:Number(output.uploaded        ?? customStatus.uploaded    ?? saved.extractedFiles ?? 0),
-        failedFiles:   Number(output.failed          ?? customStatus.failed      ?? saved.failedFiles   ?? 0),
-        message:              customStatus.message   || output.message     || saved.message || '',
-        error:                apiData.failureDetails
-                                ? JSON.stringify(apiData.failureDetails, null, 2)
-                                : (saved.error || null),
-        createdAt:            apiData.createdTime    || saved.createdAt,
-        startedAt:            saved.startedAt        || null,
-        completedAt:          ['Completed','Failed','Terminated'].includes(runtimeStatus)
-                                ? (output.completedAt || apiData.lastUpdatedTime || saved.completedAt)
-                                : saved.completedAt,
-        lastUpdatedTime:      apiData.lastUpdatedTime || saved.lastUpdatedTime,
-        input,
-        raw: apiData,
-      };
-    }
-
-    // ── API calls ────────────────────────────────────────────────────────────
-
-    async function apiFetch(path, options = {}) {
-      const url = apiUrl(path);
-      let response;
-      try {
-        response = await fetch(url, {
-          headers: { ...apiHeaders(), ...(options.headers || {}) },
-          ...options,
-        });
-      } catch (networkErr) {
-        // Distinguish CORS / network errors from HTTP errors
-        if (networkErr instanceof TypeError) {
-          throw new Error(
-            `Network error reaching ${url}. This is often a CORS issue — ensure the Function App's CORS settings allow this origin, or that the function key is correct.`
-          );
-        }
-        throw networkErr;
-      }
-
-      const text = await response.text();
-      let data = {};
-      try { data = text ? JSON.parse(text) : {}; } catch { data = { raw: text }; }
-
-      if (!response.ok) {
-        throw new Error(data.error || data.message || text || `HTTP ${response.status}`);
-      }
-      return data;
-    }
-
-    async function fetchJobStatus(job) {
-      const url = job.statusQueryGetUri
-        ? job.statusQueryGetUri
-        : apiUrl(`/api/jobs/${encodeURIComponent(job.id)}`);
-
-      const headers = job.statusQueryGetUri ? {} : apiHeaders();
-
-      let response;
-      try {
-        response = await fetch(url, { headers });
-      } catch (networkErr) {
-        return { ...job, _refreshError: 'Network / CORS error: ' + networkErr.message };
-      }
-
-      const text = await response.text();
-      let data = {};
-      try { data = text ? JSON.parse(text) : {}; } catch { data = {}; }
-
-      if (!response.ok) {
-        return { ...job, _refreshError: `Status refresh failed (HTTP ${response.status})` };
-      }
-      return normalizeJob(job, data);
-    }
-
-    async function terminateJob(job) {
-      if (job.terminatePostUri) {
-        await fetch(job.terminatePostUri, { method: 'POST', headers: {} });
-      } else {
-        await apiFetch(`/api/jobs/${encodeURIComponent(job.id)}/terminate`, { method: 'POST' });
-      }
-    }
-
-    async function purgeJob(job) {
-      if (job.purgeHistoryDeleteUri) {
-        await fetch(job.purgeHistoryDeleteUri, { method: 'DELETE', headers: {} });
-      } else {
-        await apiFetch(`/api/jobs/${encodeURIComponent(job.id)}`, { method: 'DELETE' });
-      }
-    }
-
-    // ── Load / refresh jobs ──────────────────────────────────────────────────
-
-    async function loadJobs() {
-      try {
-        if (isApiMode()) {
-          const savedJobs = readJobs();
-          const refreshed = await Promise.all(savedJobs.map(job => fetchJobStatus(job)));
-          writeJobs(refreshed);
-          state.jobs = refreshed;
-        } else {
-          state.jobs = simulateJobs(readJobs());
-        }
-        render();
-        setLastRefresh();
-
-        // If the modal is open, refresh its content
-        if (state.activeModalJobId) {
-          const updated = state.jobs.find(j => String(j.id) === String(state.activeModalJobId));
-          if (updated) renderModalBody(updated);
-        }
-      } catch (err) {
-        showMessage(err.message || 'Failed to load jobs.', 'error');
-      }
-    }
-
-    // ── Simulation (static mode only) ────────────────────────────────────────
-
-    function simulateJobs(jobs) {
-      const now = Date.now();
-      let changed = false;
-      jobs = jobs.map(job => {
-        if (job.status === 'queued' && now - new Date(job.createdAt).getTime() > 4000) {
-          changed = true;
-          return { ...job, status: 'running', startedAt: new Date().toISOString(), progress: 12 };
-        }
-        if (job.status === 'running') {
-          const next = Math.min(100, (job.progress || 0) + Math.floor(Math.random() * 18));
-          changed = true;
-          if (next >= 100) {
-            const totalFiles = Math.max(1, job.totalFiles || (20 + Math.floor(Math.random() * 150)));
-            return {
-              ...job, progress: 100, status: 'completed',
-              completedAt: new Date().toISOString(),
-              totalFiles, extractedFiles: totalFiles, failedFiles: 0,
-              message: 'Unzip completed successfully.'
-            };
-          }
-          return {
-            ...job, status: 'running', progress: next,
-            totalFiles: job.totalFiles || (20 + Math.floor(Math.random() * 150)),
-            extractedFiles: Math.floor(((job.totalFiles || 100) * next) / 100)
-          };
-        }
-        return job;
-      });
-      if (changed) writeJobs(jobs);
-      return jobs;
-    }
-
-    // ── Confirm dialog ───────────────────────────────────────────────────────
-
-    function confirm(title, message) {
-      return new Promise((resolve) => {
-        el.confirmTitle.textContent = title;
-        el.confirmMessage.textContent = message;
-        el.confirmOverlay.classList.remove('hidden');
-        el.confirmOverlay.setAttribute('aria-hidden', 'false');
-
-        const cleanup = (result) => {
-          el.confirmOverlay.classList.add('hidden');
-          el.confirmOverlay.setAttribute('aria-hidden', 'true');
-          el.confirmOkBtn.removeEventListener('click', onOk);
-          el.confirmCancelBtn.removeEventListener('click', onCancel);
-          resolve(result);
-        };
-        const onOk     = () => cleanup(true);
-        const onCancel = () => cleanup(false);
-        el.confirmOkBtn.addEventListener('click', onOk);
-        el.confirmCancelBtn.addEventListener('click', onCancel);
-      });
-    }
-
-    // ── Submit ───────────────────────────────────────────────────────────────
-
-    function validateUNC(value, fieldName) {
-      if (!/^\\\\[^\\]+\\[^\\]+/.test(value.trim())) {
-        throw new Error(`${fieldName} must be a valid UNC path like \\\\server\\share\\path`);
-      }
-    }
-
-    async function submitJob(event) {
-      event.preventDefault();
-      clearMessage();
-      el.submitBtn.disabled = true;
-      el.submitLoader.classList.remove('hidden');
-
-      try {
-        const source_unc      = el.source.value.trim();
-        const destination_unc = el.destination.value.trim();
-        validateUNC(source_unc, 'Source UNC');
-        validateUNC(destination_unc, 'Destination UNC');
-
-        const payload = {
-          source_unc,
-          destination_unc,
-          zip_password: el.password.value || null,
-          overwrite: el.overwrite.checked,
-        };
-
-        if (isApiMode()) {
-          const result = await apiFetch('/api/jobs', {
-            method: 'POST',
-            body: JSON.stringify(payload),
-          });
-
-          const job = normalizeJob({
-            id:                   result.instanceId || result.id,
-            statusQueryGetUri:    result.statusQueryGetUri    || null,
-            terminatePostUri:     result.terminatePostUri     || null,
-            purgeHistoryDeleteUri: result.purgeHistoryDeleteUri || null,
-            source_unc,
-            destination_unc,
-            zipFile:  basename(source_unc),
-            status:   'queued',
-            runtimeStatus: 'Pending',
-            progress: 0,
-            totalFiles: 0, extractedFiles: 0, failedFiles: 0,
-            message:  result.message || 'Orchestration started.',
-            createdAt: new Date().toISOString(),
-            startedAt: null, completedAt: null, error: null,
-            input: payload,
-          });
-
-          const jobs = readJobs();
-          jobs.unshift(job);
-          writeJobs(jobs);
-          showMessage('Job submitted successfully.', 'success');
-        } else {
-          const jobs = readJobs();
-          jobs.unshift({
-            id: (crypto.randomUUID ? crypto.randomUUID() : 'job-' + Date.now()),
-            source_unc, destination_unc,
-            zipFile: basename(source_unc),
-            overwrite: payload.overwrite,
-            hasPassword: Boolean(payload.zip_password),
-            status: 'queued', progress: 0,
-            totalFiles: 0, extractedFiles: 0, failedFiles: 0,
-            message: 'Job added (static website mode — no real backend).',
-            createdAt: new Date().toISOString(),
-            startedAt: null, completedAt: null, error: null,
-          });
-          writeJobs(jobs);
-          showMessage('Job added locally. Connect an API to run real unzip operations.', 'success');
-        }
-
-        el.form.reset();
-        el.overwrite.checked = true;
-        await loadJobs();
-      } catch (err) {
-        showMessage(err.message || 'Failed to submit job.', 'error');
-      } finally {
-        el.submitBtn.disabled = false;
-        el.submitLoader.classList.add('hidden');
-      }
-    }
-
-    // ── Terminate ────────────────────────────────────────────────────────────
-
-    async function handleTerminate(jobId) {
-      const job = state.jobs.find(j => String(j.id) === String(jobId));
-      if (!job) return;
-
-      const ok = await confirm(
-        'Terminate job?',
-        `This will cancel job ${job.id} immediately. The partially extracted files on the destination share will not be cleaned up automatically.`
-      );
-      if (!ok) return;
-
-      try {
-        if (isApiMode()) {
-          await terminateJob(job);
-          // Optimistically update local state
-          const jobs = readJobs().map(j =>
-            String(j.id) === String(jobId)
-              ? { ...j, status: 'terminated', runtimeStatus: 'Terminated', completedAt: new Date().toISOString() }
-              : j
-          );
-          writeJobs(jobs);
-        }
-        await loadJobs();
-      } catch (err) {
-        showMessage(`Terminate failed: ${err.message}`, 'error');
-      }
-    }
-
-    // ── Purge ────────────────────────────────────────────────────────────────
-
-    async function handlePurge(jobId) {
-      const job = state.jobs.find(j => String(j.id) === String(jobId));
-      if (!job) return;
-
-      const ok = await confirm(
-        'Purge job history?',
-        `This permanently deletes all orchestration history for job ${job.id} from the Durable Functions store. This cannot be undone.`
-      );
-      if (!ok) return;
-
-      try {
-        if (isApiMode()) {
-          await purgeJob(job);
-        }
-        // Remove from local store regardless
-        const jobs = readJobs().filter(j => String(j.id) !== String(jobId));
-        writeJobs(jobs);
-
-        if (state.activeModalJobId === String(jobId)) closeDetails();
-        await loadJobs();
-      } catch (err) {
-        showMessage(`Purge failed: ${err.message}`, 'error');
-      }
-    }
-
-    // ── Clear finished ───────────────────────────────────────────────────────
-
-    async function clearFinished() {
-      if (isApiMode()) {
-        // Purge each finished job from the backend too
-        const finished = readJobs().filter(j => ['completed', 'failed', 'terminated'].includes(j.status));
-        await Promise.allSettled(finished.map(j => purgeJob(j).catch(() => {})));
-      }
-      const remaining = readJobs().filter(j => !['completed', 'failed', 'terminated'].includes(j.status));
-      writeJobs(remaining);
-      await loadJobs();
-    }
-
-    // ── Render ───────────────────────────────────────────────────────────────
-
-    function setLastRefresh() {
-      el.lastRefresh.textContent = 'Last refreshed: ' + new Date().toLocaleString();
-    }
-
-    function showMessage(message, type = 'success') {
-      el.submitMessage.textContent = message;
-      el.submitMessage.className = `message ${type}`;
-      el.submitMessage.classList.remove('hidden');
-    }
-
-    function clearMessage() {
-      el.submitMessage.className = 'message hidden';
-      el.submitMessage.textContent = '';
-    }
-
-    function filteredJobs() {
-      const q = state.search.trim().toLowerCase();
-      return state.jobs.filter(job => {
-        const statusMatch = !state.filterStatus || job.status === state.filterStatus;
-        const haystack = [job.id, job.zipFile, job.source_unc, job.destination_unc, job.status, job.runtimeStatus || ''].join(' ').toLowerCase();
-        const searchMatch = !q || haystack.includes(q);
-        return statusMatch && searchMatch;
-      });
-    }
-
-    function renderStats() {
-      const totals = state.jobs.reduce((acc, job) => {
-        acc.total += 1;
-        if (acc[job.status] !== undefined) acc[job.status] += 1;
-        return acc;
-      }, { total: 0, queued: 0, running: 0, completed: 0, failed: 0 });
-
-      el.statTotal.textContent     = totals.total;
-      el.statQueued.textContent    = totals.queued;
-      el.statRunning.textContent   = totals.running;
-      el.statCompleted.textContent = totals.completed;
-      el.statFailed.textContent    = totals.failed;
-    }
-
-    function canTerminate(job) {
-      return isApiMode() && ['queued', 'running'].includes(job.status);
-    }
-
-    function canPurge(job) {
-      return ['completed', 'failed', 'terminated'].includes(job.status);
-    }
-
-    function render() {
-      renderStats();
-      const jobs = filteredJobs();
-
-      if (!jobs.length) {
-        el.jobsBody.innerHTML = '<tr><td colspan="8" class="empty-row">No jobs match the current filters.</td></tr>';
-        return;
-      }
-
-      el.jobsBody.innerHTML = jobs.map(job => {
-        const progress = Math.max(0, Math.min(100, Number(job.progress || 0)));
-        const terminateBtn = canTerminate(job)
-          ? `<button type="button" class="warn-btn icon-btn" data-terminate="${escapeHtml(job.id)}" title="Terminate job">Stop</button>`
-          : '';
-        const purgeBtn = canPurge(job)
-          ? `<button type="button" class="danger-btn icon-btn" data-purge="${escapeHtml(job.id)}" title="Purge history">Purge</button>`
-          : '';
-
-        return `
+    <div class="card-body" style="padding-bottom:0">
+      <div class="stats" id="stats">
+        <div class="stat"><div class="stat-label">Total</div><div class="stat-value" id="sTotal">0</div></div>
+        <div class="stat"><div class="stat-label">Queued</div><div class="stat-value" id="sQueued">0</div></div>
+        <div class="stat"><div class="stat-label">Running</div><div class="stat-value" id="sRunning">0</div></div>
+        <div class="stat"><div class="stat-label">Done</div><div class="stat-value" id="sDone">0</div></div>
+        <div class="stat"><div class="stat-label">Failed</div><div class="stat-value" id="sFailed">0</div></div>
+      </div>
+    </div>
+    <div class="table-wrap" style="margin-top:16px">
+      <table>
+        <thead>
           <tr>
-            <td>
-              <div class="job-title mono">${escapeHtml(job.id || '—')}</div>
-              <div class="job-meta">${escapeHtml(job.source_unc || '')}</div>
-              ${job._refreshError ? `<div class="tiny" style="color:#ffc7d0">⚠ ${escapeHtml(job._refreshError)}</div>` : ''}
-            </td>
-            <td>
-              <span class="status-pill status-${escapeHtml(job.status || 'queued')}">${escapeHtml(job.status || 'queued')}</span>
-              <div class="tiny">${escapeHtml(job.runtimeStatus || '')}</div>
-            </td>
-            <td>
-              <div class="progress-shell"><div class="progress-bar" style="width:${progress}%"></div></div>
-              <div class="tiny">${progress}%</div>
-            </td>
-            <td>
-              <div>${escapeHtml(job.zipFile || basename(job.source_unc || ''))}</div>
-              <div class="tiny mono">${escapeHtml(job.destination_unc || '')}</div>
-            </td>
-            <td>
-              <div class="tiny">Created: ${escapeHtml(formatDate(job.createdAt))}</div>
-              <div class="tiny">Started: ${escapeHtml(formatDate(job.startedAt))}</div>
-              <div class="tiny">Ended: ${escapeHtml(formatDate(job.completedAt))}</div>
-            </td>
-            <td>
-              <div class="tiny">Total: ${escapeHtml(String(job.totalFiles ?? 0))}</div>
-              <div class="tiny">Extracted: ${escapeHtml(String(job.extractedFiles ?? 0))}</div>
-              <div class="tiny">Failed: ${escapeHtml(String(job.failedFiles ?? 0))}</div>
-            </td>
-            <td>${escapeHtml(durationText(job))}</td>
-            <td>
-              <div class="action-group">
-                <button type="button" class="secondary-btn icon-btn" data-details="${escapeHtml(job.id)}">Details</button>
-                ${terminateBtn}
-                ${purgeBtn}
-              </div>
-            </td>
-          </tr>`;
-      }).join('');
+            <th>Instance ID</th>
+            <th>Status</th>
+            <th>Progress</th>
+            <th>ZIP File</th>
+            <th>Files</th>
+            <th>Created</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="jobsBody">
+          <tr class="empty-row"><td colspan="7">No jobs yet.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
 
-      // Bind row action buttons
-      document.querySelectorAll('[data-details]').forEach(btn =>
-        btn.addEventListener('click', () => openDetails(btn.getAttribute('data-details')))
-      );
-      document.querySelectorAll('[data-terminate]').forEach(btn =>
-        btn.addEventListener('click', () => handleTerminate(btn.getAttribute('data-terminate')))
-      );
-      document.querySelectorAll('[data-purge]').forEach(btn =>
-        btn.addEventListener('click', () => handlePurge(btn.getAttribute('data-purge')))
-      );
-    }
+</div>
 
-    // ── Modal ────────────────────────────────────────────────────────────────
+<!-- Modal -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <div class="modal-head">
+      <h3 id="modalTitle">Job Details</h3>
+      <button class="modal-close" id="modalClose">×</button>
+    </div>
+    <div class="modal-body" id="modalBody"></div>
+  </div>
+</div>
 
-    function renderModalBody(job) {
-      const canTerm  = canTerminate(job);
-      const canPurge_ = canPurge(job);
+<script>
+// ─── Config ───────────────────────────────────────────────────────────────
+window.APP_CONFIG = window.APP_CONFIG || {
+  apiBaseUrl: "",   // Set to your Function App URL e.g. https://my-app.azurewebsites.net
+  refreshMs: 8000,
+  storageKey: "unzip-portal-jobs-v2",
+};
 
-      el.modalBody.innerHTML = `
-        <div class="detail-grid">
-          <div class="detail-card">
-            <div class="detail-label">Status</div>
-            <div><span class="status-pill status-${escapeHtml(job.status)}">${escapeHtml(job.status)}</span></div>
-          </div>
-          <div class="detail-card">
-            <div class="detail-label">Runtime Status</div>
-            <div>${escapeHtml(job.runtimeStatus || '—')}</div>
-          </div>
-          <div class="detail-card full">
-            <div class="detail-label">Source UNC</div>
-            <div class="mono">${escapeHtml(job.source_unc || '—')}</div>
-          </div>
-          <div class="detail-card full">
-            <div class="detail-label">Destination UNC</div>
-            <div class="mono">${escapeHtml(job.destination_unc || '—')}</div>
-          </div>
-          <div class="detail-card">
-            <div class="detail-label">Created</div>
-            <div>${escapeHtml(formatDate(job.createdAt))}</div>
-          </div>
-          <div class="detail-card">
-            <div class="detail-label">Last Updated</div>
-            <div>${escapeHtml(formatDate(job.lastUpdatedTime))}</div>
-          </div>
-          <div class="detail-card">
-            <div class="detail-label">Duration</div>
-            <div>${escapeHtml(durationText(job))}</div>
-          </div>
-          <div class="detail-card">
-            <div class="detail-label">Progress</div>
-            <div>
-              <div class="progress-shell" style="width:100%;margin-bottom:6px">
-                <div class="progress-bar" style="width:${Math.max(0,Math.min(100,Number(job.progress||0)))}%"></div>
-              </div>
-              ${escapeHtml(String(job.progress ?? 0))}%
-            </div>
-          </div>
-          <div class="detail-card">
-            <div class="detail-label">Total Files</div>
-            <div>${escapeHtml(String(job.totalFiles ?? 0))}</div>
-          </div>
-          <div class="detail-card">
-            <div class="detail-label">Extracted / Failed</div>
-            <div>${escapeHtml(String(job.extractedFiles ?? 0))} / ${escapeHtml(String(job.failedFiles ?? 0))}</div>
-          </div>
-          <div class="detail-card full">
-            <div class="detail-label">Message</div>
-            <div>${escapeHtml(job.message || '—')}</div>
-          </div>
-          <div class="detail-card full">
-            <div class="detail-label">Error / Failure Details</div>
-            <div class="mono" style="white-space:pre-wrap;font-size:12px">${escapeHtml(job.error || 'None')}</div>
-          </div>
-          <div class="detail-card full">
-            <div class="detail-label">Instance ID</div>
-            <div class="mono">${escapeHtml(job.id || '—')}</div>
-          </div>
-        </div>
+// ─── State ────────────────────────────────────────────────────────────────
+const state = { jobs: [], filter: "", search: "" };
 
-        ${(canTerm || canPurge_) ? `
-        <div class="modal-actions-section">
-          <span class="modal-actions-label">Job Actions</span>
-          ${canTerm ? `<button type="button" class="warn-btn" id="modalTerminateBtn">Stop / Terminate Job</button>` : ''}
-          ${canPurge_ ? `<button type="button" class="danger-btn" id="modalPurgeBtn">Purge History</button>` : ''}
-        </div>` : ''}
-      `;
+// ─── DOM refs ─────────────────────────────────────────────────────────────
+const $ = id => document.getElementById(id);
+const el = {
+  form: $("jobForm"),
+  source: $("sourceUnc"),
+  dest: $("destUnc"),
+  overwrite: $("overwrite"),
+  submitBtn: $("submitBtn"),
+  submitSpinner: $("submitSpinner"),
+  submitAlert: $("submitAlert"),
+  jobsBody: $("jobsBody"),
+  refreshBtn: $("refreshBtn"),
+  clearBtn: $("clearBtn"),
+  search: $("search"),
+  apiBadge: $("apiBadge"),
+  modalOverlay: $("modalOverlay"),
+  modalClose: $("modalClose"),
+  modalTitle: $("modalTitle"),
+  modalBody: $("modalBody"),
+  sTotal: $("sTotal"), sQueued: $("sQueued"),
+  sRunning: $("sRunning"), sDone: $("sDone"), sFailed: $("sFailed"),
+};
 
-      document.getElementById('modalTerminateBtn')?.addEventListener('click', () => handleTerminate(job.id));
-      document.getElementById('modalPurgeBtn')?.addEventListener('click', () => handlePurge(job.id));
-    }
+const cfg = window.APP_CONFIG;
+const isLive = Boolean(cfg.apiBaseUrl && cfg.apiBaseUrl.trim());
 
-    function openDetails(jobId) {
-      const job = state.jobs.find(j => String(j.id) === String(jobId));
-      if (!job) return;
-      state.activeModalJobId = String(jobId);
-      el.modalTitle.textContent = `Job Details · ${job.id}`;
-      renderModalBody(job);
-      el.detailsModal.classList.remove('hidden');
-      el.detailsModal.setAttribute('aria-hidden', 'false');
-    }
+el.apiBadge.textContent = isLive ? "API connected" : "static / demo mode";
+el.apiBadge.style.borderColor = isLive ? "rgba(34,201,128,.35)" : "rgba(240,168,50,.35)";
+el.apiBadge.style.background  = isLive ? "rgba(34,201,128,.08)" : "rgba(240,168,50,.08)";
+el.apiBadge.style.color       = isLive ? "#80f0c0" : "#ffd080";
 
-    function closeDetails() {
-      state.activeModalJobId = null;
-      el.detailsModal.classList.add('hidden');
-      el.detailsModal.setAttribute('aria-hidden', 'true');
-    }
+// ─── Storage ──────────────────────────────────────────────────────────────
+function loadJobs()  { try { return JSON.parse(localStorage.getItem(cfg.storageKey) || "[]"); } catch { return []; } }
+function saveJobs(j) { localStorage.setItem(cfg.storageKey, JSON.stringify(j)); }
 
-    // ── Mode banner ──────────────────────────────────────────────────────────
+// ─── Helpers ──────────────────────────────────────────────────────────────
+function esc(s) {
+  return String(s ?? "")
+    .replace(/&/g,"&amp;").replace(/</g,"&lt;")
+    .replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+}
+function fmt(iso) {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  return isNaN(d) ? "—" : d.toLocaleString();
+}
+function basename(unc) {
+  const parts = String(unc || "").replace(/\\/g,"/").split("/").filter(Boolean);
+  return parts.at(-1) || "unknown.zip";
+}
+function normaliseStatus(rs) {
+  if (!rs) return "queued";
+  const r = rs.toLowerCase();
+  if (r === "pending") return "queued";
+  if (r === "running") return "running";
+  if (r === "completed") return "completed";
+  return "failed";
+}
 
-    function renderModeBanner() {
-      if (isApiMode()) {
-        el.modeBanner.className = 'callout info';
-        el.modeBanner.innerHTML =
-          `<strong>Durable API mode.</strong><span>Connected to <span class="mono">${escapeHtml(config.apiBaseUrl)}</span>. Jobs are submitted to and polled from the backend every ${config.refreshMs / 1000}s.</span>`;
-      } else {
-        el.modeBanner.className = 'callout';
-        el.modeBanner.innerHTML =
-          `<strong>Static website mode.</strong><span>No <span class="mono">apiBaseUrl</span> is set — jobs are simulated in <span class="mono">localStorage</span> only. Set <span class="mono">window.APP_CONFIG.apiBaseUrl</span> to connect to the Azure Durable Functions backend.</span>`;
+// ─── API ──────────────────────────────────────────────────────────────────
+async function apiFetch(path, opts = {}) {
+  const url = cfg.apiBaseUrl.replace(/\/$/, "") + path;
+  const res = await fetch(url, { headers: { "Content-Type": "application/json" }, ...opts });
+  const text = await res.text();
+  let data = {};
+  try { data = text ? JSON.parse(text) : {}; } catch {}
+  if (!res.ok) throw new Error(data.error || data.message || `HTTP ${res.status}`);
+  return data;
+}
+
+// ─── Refresh ──────────────────────────────────────────────────────────────
+async function refresh() {
+  let jobs = loadJobs();
+
+  if (isLive) {
+    jobs = await Promise.all(jobs.map(async job => {
+      if (["completed", "failed"].includes(job.status)) return job;
+      try {
+        const statusUrl = job.statusQueryGetUri
+          || `${cfg.apiBaseUrl.replace(/\/$/, "")}/api/jobs/${job.id}`;
+        const res = await fetch(statusUrl);
+        const data = await res.json();
+        return mergeApiData(job, data);
+      } catch {
+        return job;
       }
-    }
+    }));
+    saveJobs(jobs);
+  } else {
+    // Simulate progress in demo mode
+    let changed = false;
+    jobs = jobs.map(job => {
+      if (job.status === "queued" && Date.now() - new Date(job.createdAt) > 3000) {
+        changed = true;
+        return { ...job, status: "running", progress: 10 };
+      }
+      if (job.status === "running") {
+        changed = true;
+        const p = Math.min(100, (job.progress || 10) + Math.floor(Math.random() * 20));
+        if (p >= 100) return { ...job, status: "completed", progress: 100, totalFiles: 42, uploaded: 42 };
+        return { ...job, progress: p };
+      }
+      return job;
+    });
+    if (changed) saveJobs(jobs);
+  }
 
-    // ── Event binding ────────────────────────────────────────────────────────
+  state.jobs = jobs;
+  render();
+}
 
-    function bindEvents() {
-      el.form.addEventListener('submit', submitJob);
-      el.refreshBtn.addEventListener('click', loadJobs);
-      el.clearFinishedBtn.addEventListener('click', clearFinished);
-      el.searchBox.addEventListener('input', e => { state.search = e.target.value; render(); });
+function mergeApiData(saved, api) {
+  const cs = api.customStatus || {};
+  const out = api.output || {};
+  return {
+    ...saved,
+    runtimeStatus: api.runtimeStatus,
+    status: normaliseStatus(api.runtimeStatus),
+    progress: cs.progress ?? (api.runtimeStatus === "Completed" ? 100 : saved.progress ?? 0),
+    stage: cs.stage || saved.stage,
+    totalFiles: out.totalFiles ?? cs.fileCount ?? saved.totalFiles ?? 0,
+    uploaded: out.uploaded ?? saved.uploaded ?? 0,
+    failed: out.failed ?? saved.failed ?? 0,
+    lastUpdatedTime: api.lastUpdatedTime || saved.lastUpdatedTime,
+    output: api.output || saved.output,
+    customStatus: api.customStatus || saved.customStatus,
+  };
+}
 
-      document.querySelectorAll('.filter-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-          document.querySelectorAll('.filter-btn').forEach(x => x.classList.remove('active'));
-          btn.classList.add('active');
-          state.filterStatus = btn.dataset.status || '';
-          render();
-        });
+// ─── Submit ───────────────────────────────────────────────────────────────
+el.form.addEventListener("submit", async e => {
+  e.preventDefault();
+  clearAlert();
+  el.submitBtn.disabled = true;
+  el.submitSpinner.style.display = "block";
+
+  const source_unc = el.source.value.trim();
+  const destination_unc = el.dest.value.trim();
+  const overwrite = el.overwrite.checked;
+
+  try {
+    if (!source_unc) throw new Error("Source UNC is required");
+    if (!destination_unc) throw new Error("Destination UNC is required");
+
+    let job;
+    if (isLive) {
+      const result = await apiFetch("/api/jobs", {
+        method: "POST",
+        body: JSON.stringify({ source_unc, destination_unc, overwrite, zip_password }),
       });
-
-      el.closeModalBtn.addEventListener('click', closeDetails);
-      el.modalOverlay.addEventListener('click', closeDetails);
-      document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDetails(); });
+      job = {
+        id: result.instanceId,
+        statusQueryGetUri: result.statusQueryGetUri,
+        terminatePostUri: result.terminatePostUri,
+        source_unc,
+        destination_unc,
+        zipFile: basename(source_unc),
+        status: "queued",
+        runtimeStatus: "Pending",
+        progress: 0,
+        totalFiles: 0,
+        uploaded: 0,
+        failed: 0,
+        createdAt: new Date().toISOString(),
+      };
+    } else {
+      job = {
+        id: crypto.randomUUID(),
+        source_unc, destination_unc,
+        zipFile: basename(source_unc),
+        status: "queued",
+        progress: 0,
+        totalFiles: 0,
+        uploaded: 0,
+        failed: 0,
+        createdAt: new Date().toISOString(),
+      };
     }
 
-    // ── Boot ─────────────────────────────────────────────────────────────────
+    const jobs = loadJobs();
+    jobs.unshift(job);
+    saveJobs(jobs);
+    el.form.reset();
+    el.overwrite.checked = true;
+    showAlert("Job submitted successfully.", "success");
+    await refresh();
+  } catch (err) {
+    showAlert(err.message || "Failed to submit job.", "error");
+  } finally {
+    el.submitBtn.disabled = false;
+    el.submitSpinner.style.display = "none";
+  }
+});
 
-    renderModeBanner();
-    bindEvents();
-    loadJobs();
-    state.refreshTimer = window.setInterval(loadJobs, Number(config.refreshMs || 8000));
+// ─── Render ───────────────────────────────────────────────────────────────
+function render() {
+  const q = state.search.trim().toLowerCase();
+  const filtered = state.jobs.filter(j => {
+    const statusOk = !state.filter || j.status === state.filter;
+    const searchOk = !q || [j.id, j.zipFile, j.source_unc, j.destination_unc, j.status].join(" ").toLowerCase().includes(q);
+    return statusOk && searchOk;
+  });
 
-  })();
-  </script>
+  // Stats
+  const counts = { queued:0, running:0, completed:0, failed:0 };
+  state.jobs.forEach(j => { if (counts[j.status] !== undefined) counts[j.status]++; });
+  el.sTotal.textContent = state.jobs.length;
+  el.sQueued.textContent = counts.queued;
+  el.sRunning.textContent = counts.running;
+  el.sDone.textContent = counts.completed;
+  el.sFailed.textContent = counts.failed;
+
+  if (!filtered.length) {
+    el.jobsBody.innerHTML = `<tr class="empty-row"><td colspan="7">${state.jobs.length ? "No jobs match the filter." : "No jobs yet."}</td></tr>`;
+    return;
+  }
+
+  el.jobsBody.innerHTML = filtered.map(job => {
+    const p = Math.max(0, Math.min(100, job.progress || 0));
+    const statusClass = `pill-${job.status || "queued"}`;
+    return `<tr>
+      <td><div class="mono dim" style="font-size:11px">${esc(job.id)}</div></td>
+      <td><span class="pill ${statusClass}"><span class="pill-dot"></span>${esc(job.status)}</span></td>
+      <td>
+        <div class="prog-wrap"><div class="prog-bar" style="width:${p}%"></div></div>
+        <div class="dim" style="margin-top:4px">${p}%${job.stage ? ` · ${esc(job.stage)}` : ""}</div>
+      </td>
+      <td>
+        <div>${esc(job.zipFile || basename(job.source_unc))}</div>
+        <div class="dim">${esc(job.destination_unc || "")}</div>
+      </td>
+      <td>
+        <div>${job.uploaded ?? 0} uploaded</div>
+        ${job.failed ? `<div class="dim" style="color:#f08090">${job.failed} failed</div>` : ""}
+      </td>
+      <td><div class="dim">${fmt(job.createdAt)}</div></td>
+      <td><button class="btn btn-ghost" style="padding:6px 12px;font-size:11px" onclick="openModal('${esc(job.id)}')">Details</button></td>
+    </tr>`;
+  }).join("");
+}
+
+// ─── Modal ────────────────────────────────────────────────────────────────
+function openModal(id) {
+  const job = state.jobs.find(j => j.id === id);
+  if (!job) return;
+  el.modalTitle.textContent = `Job · ${job.id.slice(0,12)}…`;
+  const cs = job.customStatus || {};
+  const out = job.output || {};
+  el.modalBody.innerHTML = `
+    <div class="detail-grid">
+      <div class="detail-block"><div class="detail-key">Status</div><div class="detail-val"><span class="pill pill-${job.status}"><span class="pill-dot"></span>${esc(job.status)}</span></div></div>
+      <div class="detail-block"><div class="detail-key">Runtime status</div><div class="detail-val">${esc(job.runtimeStatus || "—")}</div></div>
+      <div class="detail-block full"><div class="detail-key">Instance ID</div><div class="detail-val mono">${esc(job.id)}</div></div>
+      <div class="detail-block full"><div class="detail-key">Source UNC</div><div class="detail-val mono">${esc(job.source_unc || "—")}</div></div>
+      <div class="detail-block full"><div class="detail-key">Destination UNC</div><div class="detail-val mono">${esc(job.destination_unc || "—")}</div></div>
+      <div class="detail-block"><div class="detail-key">Created</div><div class="detail-val">${fmt(job.createdAt)}</div></div>
+      <div class="detail-block"><div class="detail-key">Last updated</div><div class="detail-val">${fmt(job.lastUpdatedTime)}</div></div>
+      <div class="detail-block"><div class="detail-key">Progress</div><div class="detail-val">${job.progress ?? 0}% · stage: ${esc(job.stage || cs.stage || "—")}</div></div>
+      <div class="detail-block"><div class="detail-key">Files</div><div class="detail-val">${job.uploaded ?? 0} uploaded · ${job.failed ?? 0} failed · ${job.totalFiles ?? 0} total</div></div>
+      ${out.failures?.length ? `<div class="detail-block full"><div class="detail-key">Failures (first ${Math.min(out.failures.length, 10)})</div><div class="detail-val mono dim">${out.failures.slice(0,10).map(f => esc(f.path + ": " + f.error)).join("<br>")}</div></div>` : ""}
+    </div>`;
+  el.modalOverlay.classList.add("open");
+}
+function closeModal() { el.modalOverlay.classList.remove("open"); }
+el.modalClose.addEventListener("click", closeModal);
+el.modalOverlay.addEventListener("click", e => { if (e.target === el.modalOverlay) closeModal(); });
+document.addEventListener("keydown", e => { if (e.key === "Escape") closeModal(); });
+
+// ─── Misc controls ────────────────────────────────────────────────────────
+el.refreshBtn.addEventListener("click", refresh);
+el.clearBtn.addEventListener("click", () => {
+  saveJobs(loadJobs().filter(j => !["completed","failed"].includes(j.status)));
+  refresh();
+});
+el.search.addEventListener("input", e => { state.search = e.target.value; render(); });
+document.querySelectorAll(".filter-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".filter-btn").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    state.filter = btn.dataset.f;
+    render();
+  });
+});
+
+function showAlert(msg, type) {
+  el.submitAlert.textContent = msg;
+  el.submitAlert.className = `alert alert-${type} show`;
+}
+function clearAlert() { el.submitAlert.className = "alert"; }
+
+// ─── Boot ─────────────────────────────────────────────────────────────────
+refresh();
+setInterval(refresh, cfg.refreshMs || 8000);
+</script>
 </body>
 </html>
