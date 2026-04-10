@@ -1,567 +1,87 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Azure ZIP Unzip Portal</title>
-<style>
-:root {
-  --bg: #0b1220; --panel: #111a2e; --panel-2: #16233d; --line: #243453;
-  --text: #e8eefc; --muted: #9eb0d1; --accent: #67b3ff; --accent-2: #2f7de1;
-  --success: #18b26b; --warning: #f2a93b; --danger: #e85d75;
-  --shadow: 0 20px 50px rgba(0,0,0,0.28); --radius: 18px;
-}
-* { box-sizing: border-box; }
-html, body { margin: 0; padding: 0; }
-body { font-family: Inter, Segoe UI, Roboto, Arial, sans-serif; background: linear-gradient(180deg,#0a1020 0%,#0f1830 100%); color: var(--text); min-height: 100vh; }
-.page-shell { width: 100%; padding: 28px; }
-.page { max-width: 1320px; margin: 0 auto; display: grid; gap: 24px; }
-.card { background: rgba(17,26,46,0.95); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
-.hero { display: flex; justify-content: space-between; gap: 20px; align-items: flex-start; padding: 28px; background: linear-gradient(135deg,rgba(103,179,255,0.18),rgba(47,125,225,0.05)); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); }
-.eyebrow { text-transform: uppercase; letter-spacing: 0.12em; color: var(--accent); font-size: 12px; font-weight: 700; margin-bottom: 10px; }
-h1,h2,h3,p { margin-top: 0; }
-h1 { font-size: clamp(28px,4vw,42px); margin-bottom: 12px; }
-h2 { font-size: 24px; margin-bottom: 8px; }
-h3 { font-size: 20px; margin-bottom: 8px; }
-p, label, input, button, span, td, th { font-size: 14px; }
-.section-subtitle,.modal-subtitle,.hero-copy p,.refresh-time,.refresh-label { color: var(--muted); }
-.hero-side,.refresh-box { min-width: 220px; }
-.refresh-box,.callout { background: rgba(8,14,26,0.55); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; display: grid; gap: 6px; }
-.callout { margin: 20px 28px 0; background: rgba(242,169,59,0.08); border-color: rgba(242,169,59,0.3); }
-.callout strong { color: #ffd28a; }
-.card-header { padding: 24px 28px 0; }
-.form-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 18px; padding: 20px 28px 28px; }
-.form-group { display: grid; gap: 8px; }
-.full-width { grid-column: 1 / -1; }
-label { color: #c7d6f2; font-weight: 600; }
-input[type="text"], input[type="password"] { width: 100%; border: 1px solid var(--line); background: #0d1527; color: var(--text); padding: 13px 14px; border-radius: 12px; outline: none; }
-input::placeholder { color: #7183a9; }
-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(103,179,255,0.14); }
-.checkbox-group { align-self: end; }
-.checkbox-label { display: inline-flex; align-items: center; gap: 10px; padding: 13px 14px; border: 1px solid var(--line); border-radius: 12px; min-height: 48px; background: #0d1527; font-weight: 500; }
-.form-actions,.toolbar,.toolbar-actions,.filter-group,.jobs-header { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
-.jobs-header { justify-content: space-between; padding-bottom: 18px; }
-button { border: 0; border-radius: 12px; padding: 12px 16px; font-weight: 700; cursor: pointer; transition: transform 0.15s ease, opacity 0.15s ease; }
-button:hover { transform: translateY(-1px); }
-button:disabled { opacity: 0.7; cursor: not-allowed; transform: none; }
-.primary-btn { background: linear-gradient(135deg,var(--accent),var(--accent-2)); color: white; }
-.secondary-btn,.filter-btn { background: #16233b; color: var(--text); border: 1px solid var(--line); }
-.filter-btn.active { border-color: var(--accent); color: white; background: #1d3154; }
-.danger-lite { border-color: rgba(232,93,117,0.35); color: #ffc7d0; }
-.danger-btn { background: rgba(232,93,117,0.15); border: 1px solid rgba(232,93,117,0.4); color: #ffc7d0; }
-.search-input { min-width: min(100%,360px); flex: 1 1 280px; }
-.loader { width: 18px; height: 18px; border: 2px solid rgba(255,255,255,0.25); border-top-color: white; border-radius: 50%; animation: spin 0.8s linear infinite; }
-.hidden { display: none !important; }
-@keyframes spin { to { transform: rotate(360deg); } }
-.message { margin: 0 28px 28px; padding: 14px 16px; border-radius: 12px; border: 1px solid transparent; }
-.message.success { background: rgba(24,178,107,0.1); border-color: rgba(24,178,107,0.35); color: #b7f5d6; }
-.message.error { background: rgba(232,93,117,0.1); border-color: rgba(232,93,117,0.35); color: #ffc8d0; }
-.stats-grid { display: grid; grid-template-columns: repeat(5,minmax(0,1fr)); gap: 14px; padding: 0 28px 22px; }
-.stat-tile { background: #0d1527; border: 1px solid var(--line); border-radius: 14px; padding: 16px; display: grid; gap: 8px; }
-.stat-label { color: var(--muted); }
-.stat-value { font-size: 26px; font-weight: 800; }
-.table-wrapper { overflow-x: auto; padding: 0 0 12px; }
-table { width: 100%; border-collapse: collapse; min-width: 1100px; }
-th,td { text-align: left; padding: 16px 18px; border-top: 1px solid var(--line); vertical-align: top; }
-th { color: #c7d6f2; font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; background: rgba(255,255,255,0.02); }
-.empty-row { text-align: center; color: var(--muted); padding: 38px 18px; }
-.job-title { font-weight: 800; }
-.job-meta,.tiny { color: var(--muted); font-size: 12px; }
-.status-pill { display: inline-flex; align-items: center; gap: 8px; padding: 7px 10px; border-radius: 999px; font-size: 12px; font-weight: 800; text-transform: capitalize; border: 1px solid transparent; }
-.status-queued { background: rgba(103,179,255,0.12); color: #bdddff; border-color: rgba(103,179,255,0.28); }
-.status-running { background: rgba(242,169,59,0.12); color: #ffd58c; border-color: rgba(242,169,59,0.28); }
-.status-completed { background: rgba(24,178,107,0.12); color: #b7f5d6; border-color: rgba(24,178,107,0.28); }
-.status-failed { background: rgba(232,93,117,0.12); color: #ffc7d0; border-color: rgba(232,93,117,0.28); }
-.progress-shell { width: 180px; max-width: 100%; height: 10px; background: #0c1322; border-radius: 999px; overflow: hidden; border: 1px solid var(--line); margin-bottom: 8px; }
-.progress-bar { height: 100%; background: linear-gradient(90deg,var(--accent),var(--accent-2)); }
-.icon-btn { padding: 9px 12px; font-size: 13px; }
-.btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
-.mono { font-family: ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; word-break: break-word; }
-.modal { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; padding: 20px; }
-.modal-overlay { position: absolute; inset: 0; background: rgba(3,7,18,0.72); backdrop-filter: blur(4px); }
-.modal-content { position: relative; width: min(920px,100%); max-height: 88vh; overflow: auto; background: #10192d; border: 1px solid var(--line); border-radius: 20px; box-shadow: var(--shadow); }
-.modal-header,.modal-body { padding: 24px 26px; }
-.modal-header { display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; border-bottom: 1px solid var(--line); }
-.close-btn { background: transparent; color: white; font-size: 28px; line-height: 1; padding: 0; }
-.detail-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 14px; }
-.detail-card { background: #0d1527; border: 1px solid var(--line); border-radius: 14px; padding: 16px; }
-.detail-card.full { grid-column: 1 / -1; }
-.detail-label { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .08em; margin-bottom: 8px; }
-.modal-actions { margin-top: 20px; display: flex; gap: 12px; flex-wrap: wrap; }
-@media (max-width: 980px) {
-  .hero,.jobs-header { flex-direction: column; }
-  .stats-grid,.form-grid,.detail-grid { grid-template-columns: 1fr; }
-  .hero-side,.refresh-box { width: 100%; }
-}
-</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Azure ZIP Extractor</title>
+  <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-<div class="page-shell">
-  <div class="page">
-
-    <header class="hero">
-      <div class="hero-copy">
-        <div class="eyebrow">Azure File Share Operations</div>
-        <h1>Azure ZIP Unzip Portal</h1>
-        <p>Submit unzip tasks, monitor progress, inspect failures, and review job history.</p>
-      </div>
-      <div class="hero-side">
-        <div class="refresh-box">
-          <span class="refresh-label">Portal Refresh</span>
-          <span id="lastRefresh" class="refresh-time">Last refreshed: Never</span>
-        </div>
-      </div>
-    </header>
-
-    <section class="card form-card">
-      <div class="callout" id="modeBanner"><strong>Loading…</strong></div>
-
-      <div class="card-header">
-        <h2>Submit New Task</h2>
-        <p class="section-subtitle">Provide source and destination UNC paths, then start the unzip job.</p>
-      </div>
-
-      <!-- Intentionally NOT a <form> element — prevents page reload on API errors -->
-      <div class="form-grid">
-        <div class="form-group full-width">
-          <label for="source_unc">Source UNC</label>
-          <input type="text" id="source_unc" placeholder="\\storageaccount.file.core.windows.net\share\file.zip" />
-        </div>
-        <div class="form-group full-width">
-          <label for="destination_unc">Destination UNC</label>
-          <input type="text" id="destination_unc" placeholder="\\storageaccount.file.core.windows.net\share\folder" />
-        </div>
-        <div class="form-group">
-          <label for="zip_password">ZIP Password (optional)</label>
-          <input type="password" id="zip_password" placeholder="Enter password if ZIP is protected" />
-        </div>
-        <div class="form-group checkbox-group">
-          <label class="checkbox-label">
-            <input type="checkbox" id="overwrite" checked />
-            <span>Overwrite existing files</span>
-          </label>
-        </div>
-        <div class="form-actions full-width">
-          <button type="button" id="submitBtn" class="primary-btn">Start Unzip</button>
-          <span id="submitLoader" class="loader hidden"></span>
-        </div>
-      </div>
-      <div id="submitMessage" class="message hidden"></div>
-    </section>
-
-    <section class="card jobs-card">
-      <div class="card-header jobs-header">
+  <main class="container">
+    <section class="card">
+      <div class="header-row">
         <div>
-          <h2>Jobs</h2>
-          <p class="section-subtitle">Live queue and history of submitted unzip jobs.</p>
+          <h1>Azure ZIP Extractor</h1>
+          <p class="subtitle">Pick a ZIP file from Azure Files and extract it to another folder.</p>
         </div>
-        <div class="toolbar">
-          <input type="text" id="searchBox" class="search-input" placeholder="Search by job ID, ZIP file, source, destination" />
-          <div class="filter-group">
-            <button type="button" class="filter-btn active" data-status="">All</button>
-            <button type="button" class="filter-btn" data-status="queued">Queued</button>
-            <button type="button" class="filter-btn" data-status="running">Running</button>
-            <button type="button" class="filter-btn" data-status="completed">Completed</button>
-            <button type="button" class="filter-btn" data-status="failed">Failed</button>
-          </div>
-          <div class="toolbar-actions">
-            <button type="button" id="refreshBtn" class="secondary-btn">Refresh</button>
-            <button type="button" id="clearFinishedBtn" class="secondary-btn danger-lite">Clear Finished</button>
-          </div>
-        </div>
+        <button id="refreshButton" class="secondary">Refresh</button>
       </div>
 
-      <div class="stats-grid">
-        <div class="stat-tile"><span class="stat-label">Total</span><span class="stat-value" id="statTotal">0</span></div>
-        <div class="stat-tile"><span class="stat-label">Queued</span><span class="stat-value" id="statQueued">0</span></div>
-        <div class="stat-tile"><span class="stat-label">Running</span><span class="stat-value" id="statRunning">0</span></div>
-        <div class="stat-tile"><span class="stat-label">Completed</span><span class="stat-value" id="statCompleted">0</span></div>
-        <div class="stat-tile"><span class="stat-label">Failed</span><span class="stat-value" id="statFailed">0</span></div>
+      <div class="grid">
+        <label>
+          <span>Source directory</span>
+          <input id="sourceDirectory" type="text" value="incoming" placeholder="incoming" />
+        </label>
+
+        <label>
+          <span>Destination root directory</span>
+          <input id="destinationDirectory" type="text" value="extracted" placeholder="extracted" />
+        </label>
       </div>
+
+      <div class="actions">
+        <button id="loadFilesButton">Load ZIP files</button>
+      </div>
+
+      <div id="message" class="message hidden"></div>
 
       <div class="table-wrapper">
         <table>
           <thead>
             <tr>
-              <th>Job</th><th>Status</th><th>Progress</th><th>ZIP File</th>
-              <th>Timeline</th><th>Counts</th><th>Duration</th><th>Actions</th>
+              <th></th>
+              <th>ZIP file</th>
+              <th>Path</th>
+              <th>Size</th>
+              <th>Last modified</th>
             </tr>
           </thead>
-          <tbody id="jobsBody">
-            <tr><td colspan="8" class="empty-row">Loading jobs…</td></tr>
+          <tbody id="filesTableBody">
+            <tr>
+              <td colspan="5" class="empty">Load ZIP files to begin.</td>
+            </tr>
           </tbody>
         </table>
       </div>
+
+      <div class="divider"></div>
+
+      <form id="extractForm">
+        <div class="grid">
+          <label>
+            <span>Selected ZIP</span>
+            <input id="selectedZipPath" type="text" readonly />
+          </label>
+
+          <label>
+            <span>Output folder name</span>
+            <input id="outputFolderName" type="text" placeholder="batch-001" />
+          </label>
+        </div>
+
+        <div class="actions">
+          <button id="extractButton" type="submit">Extract ZIP</button>
+        </div>
+      </form>
+
+      <section class="results">
+        <h2>Latest result</h2>
+        <pre id="resultPanel">No extraction has been run yet.</pre>
+      </section>
     </section>
+  </main>
 
-  </div>
-</div>
-
-<!-- Details modal -->
-<div id="detailsModal" class="modal hidden" aria-hidden="true">
-  <div class="modal-overlay" id="modalOverlay"></div>
-  <div class="modal-content" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
-    <div class="modal-header">
-      <div>
-        <h3 id="modalTitle">Job Details</h3>
-        <p class="modal-subtitle">Status, counters, and error information.</p>
-      </div>
-      <button type="button" id="closeModalBtn" class="close-btn" aria-label="Close">&times;</button>
-    </div>
-    <div id="modalBody" class="modal-body"></div>
-  </div>
-</div>
-
-<script>
-// Override before this tag to customise:
-window.APP_CONFIG = window.APP_CONFIG || {
-  apiBaseUrl:  "https://test-unzip-a7fmdddddrendmg4.centralus-01.azurewebsites.net",
-  functionKey: "",      // Azure Function host key (leave blank if auth level is ANONYMOUS)
-  refreshMs:   8000,
-  storageKey:  "azure-unzip-durable-jobs"
-};
-</script>
-
-<script>
-(() => {
-"use strict";
-const config     = window.APP_CONFIG || {};
-const STORE_KEY  = config.storageKey || "azure-unzip-durable-jobs";
-const isApiMode  = Boolean((config.apiBaseUrl || "").trim());
-
-// ── state ──────────────────────────────────────────────────────────────────
-const state = { jobs: [], filterStatus: "", search: "" };
-
-// ── DOM ────────────────────────────────────────────────────────────────────
-const $ = id => document.getElementById(id);
-const el = {
-  source:        $("source_unc"),
-  destination:   $("destination_unc"),
-  password:      $("zip_password"),
-  overwrite:     $("overwrite"),
-  submitBtn:     $("submitBtn"),
-  submitLoader:  $("submitLoader"),
-  submitMsg:     $("submitMessage"),
-  jobsBody:      $("jobsBody"),
-  refreshBtn:    $("refreshBtn"),
-  clearBtn:      $("clearFinishedBtn"),
-  searchBox:     $("searchBox"),
-  lastRefresh:   $("lastRefresh"),
-  modeBanner:    $("modeBanner"),
-  modal:         $("detailsModal"),
-  modalOverlay:  $("modalOverlay"),
-  modalClose:    $("closeModalBtn"),
-  modalBody:     $("modalBody"),
-  modalTitle:    $("modalTitle"),
-  statTotal:     $("statTotal"),
-  statQueued:    $("statQueued"),
-  statRunning:   $("statRunning"),
-  statCompleted: $("statCompleted"),
-  statFailed:    $("statFailed"),
-};
-
-// ── banner ─────────────────────────────────────────────────────────────────
-el.modeBanner.innerHTML = isApiMode
-  ? `<strong>Durable API mode.</strong> <span>Requests sent to <span class="mono">${esc(config.apiBaseUrl)}</span>.</span>`
-  : `<strong>Static website mode.</strong> <span>Jobs stored in <span class="mono">localStorage</span>. Connect an API for real unzip operations.</span>`;
-
-// ── utils ──────────────────────────────────────────────────────────────────
-function esc(v) {
-  return String(v ?? "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
-    .replace(/"/g,"&quot;").replace(/'/g,"&#39;");
-}
-function apiHeaders() {
-  const h = { "Content-Type": "application/json" };
-  if (config.functionKey) h["x-functions-key"] = config.functionKey;
-  return h;
-}
-function withKey(url) {
-  if (!config.functionKey) return url;
-  return `${url}${url.includes("?")?"&":"?"}code=${encodeURIComponent(config.functionKey)}`;
-}
-function basename(p) {
-  const parts = String(p||"").replace(/\\+/g,"/").split("/").filter(Boolean);
-  return parts[parts.length-1] || "unknown.zip";
-}
-function fmtDate(v) {
-  if (!v) return "—";
-  const d = new Date(v);
-  return isNaN(d) ? "—" : d.toLocaleString();
-}
-function fmtDuration(job) {
-  if (!job.createdAt) return "—";
-  const start = new Date(job.createdAt).getTime();
-  const end   = job.completedAt ? new Date(job.completedAt).getTime() : Date.now();
-  const s     = Math.max(0, Math.floor((end-start)/1000));
-  return s>59 ? `${Math.floor(s/60)}m ${s%60}s` : `${s}s`;
-}
-function validateUNC(v, label) {
-  if (!/^\\\\[^\\]+\\[^\\]+/.test(v.trim()))
-    throw new Error(`${label} must be a valid UNC path like \\\\server\\share\\path`);
-}
-
-// ── storage ────────────────────────────────────────────────────────────────
-function readJobs()        { try { return JSON.parse(localStorage.getItem(STORE_KEY)||"[]"); } catch { return []; } }
-function writeJobs(jobs)   { localStorage.setItem(STORE_KEY, JSON.stringify(jobs)); }
-
-// ── local simulation ───────────────────────────────────────────────────────
-function simulateJobs(jobs) {
-  const now = Date.now(); let changed = false;
-  jobs = jobs.map(job => {
-    if (job.status === "queued" && now - new Date(job.createdAt).getTime() > 4000) {
-      changed = true;
-      return { ...job, status:"running", startedAt: new Date().toISOString(), progress:12 };
-    }
-    if (job.status === "running") {
-      const next = Math.min(100, (job.progress||0) + Math.floor(Math.random()*18));
-      changed = true;
-      if (next >= 100) {
-        const t = job.totalFiles || (20+Math.floor(Math.random()*150));
-        return { ...job, progress:100, status:"completed", completedAt:new Date().toISOString(),
-                 totalFiles:t, extractedFiles:t, failedFiles:0, message:"Unzip completed successfully." };
-      }
-      return { ...job, status:"running", progress:next,
-               totalFiles: job.totalFiles||100,
-               extractedFiles: Math.floor(((job.totalFiles||100)*next)/100) };
-    }
-    return job;
-  });
-  if (changed) writeJobs(jobs);
-  return jobs;
-}
-
-// ── API normalisation ──────────────────────────────────────────────────────
-function normStatus(rs) {
-  if (rs==="Pending") return "queued";
-  if (rs==="Running") return "running";
-  if (rs==="Completed") return "completed";
-  if (rs==="Failed"||rs==="Terminated") return "failed";
-  return "queued";
-}
-function normJob(saved, api={}) {
-  const cs=api.customStatus||{}, out=api.output||{}, inp=api.input||saved.input||{};
-  const rs = api.runtimeStatus||saved.runtimeStatus||"Pending";
-  return {
-    id:                   api.instanceId||saved.id,
-    statusQueryGetUri:    saved.statusQueryGetUri,
-    terminatePostUri:     saved.terminatePostUri,
-    purgeHistoryDeleteUri:saved.purgeHistoryDeleteUri,
-    source_unc:           inp.source_unc      ||saved.source_unc     ||"",
-    destination_unc:      inp.destination_unc  ||saved.destination_unc||"",
-    zipFile:              saved.zipFile||basename(inp.source_unc||saved.source_unc||""),
-    status:               normStatus(rs),
-    runtimeStatus:        rs,
-    progress:             Number(cs.progress??(rs==="Completed"?100:rs==="Pending"?0:10)),
-    totalFiles:           Number(out.totalFiles??cs.totalFiles??saved.totalFiles??0),
-    extractedFiles:       Number(out.uploaded??cs.uploaded??saved.extractedFiles??0),
-    failedFiles:          Number(out.failed??cs.failed??saved.failedFiles??0),
-    message:              cs.message||out.message||saved.message||"",
-    error:                api.failureDetails?JSON.stringify(api.failureDetails):(saved.error||null),
-    createdAt:            api.createdTime||saved.createdAt,
-    startedAt:            saved.startedAt||null,
-    completedAt:          rs==="Completed"?(out.completedAt||api.lastUpdatedTime||saved.completedAt):saved.completedAt,
-    lastUpdatedTime:      api.lastUpdatedTime||saved.lastUpdatedTime,
-    input:                inp,
-  };
-}
-
-// ── fetch helpers ──────────────────────────────────────────────────────────
-async function apiFetch(path, opts={}) {
-  const url = String(config.apiBaseUrl).replace(/\/$/,"") + path;
-  const resp = await fetch(url, { mode:"cors", headers:{...apiHeaders(),...(opts.headers||{})}, ...opts });
-  const text = await resp.text();
-  let data = {};
-  try { data = text ? JSON.parse(text) : {}; } catch { data = {raw:text}; }
-  if (!resp.ok) throw new Error(data.error||data.message||text||`HTTP ${resp.status}`);
-  return data;
-}
-async function fetchStatus(job) {
-  const url = job.statusQueryGetUri
-    ? withKey(job.statusQueryGetUri)
-    : String(config.apiBaseUrl).replace(/\/$/,"") + `/api/jobs/${encodeURIComponent(job.id)}`;
-  try {
-    const resp = await fetch(url, { mode:"cors", headers: apiHeaders() });
-    const text = await resp.text();
-    let data = {};
-    try { data = text ? JSON.parse(text) : {}; } catch {}
-    if (!resp.ok) return { ...job, message:`Status refresh failed (${resp.status})` };
-    return normJob(job, data);
-  } catch { return job; }
-}
-
-// ── load/refresh ───────────────────────────────────────────────────────────
-async function loadJobs() {
-  try {
-    if (isApiMode) {
-      const saved     = readJobs();
-      const refreshed = await Promise.all(saved.map(j => fetchStatus(j)));
-      writeJobs(refreshed);
-      state.jobs = refreshed;
-    } else {
-      state.jobs = simulateJobs(readJobs());
-    }
-    render();
-    el.lastRefresh.textContent = "Last refreshed: " + new Date().toLocaleString();
-  } catch (err) {
-    showMsg(err.message||"Failed to load jobs.", "error");
-  }
-}
-
-// ── submit ─────────────────────────────────────────────────────────────────
-async function submitJob() {
-  clearMsg();
-  const source_unc      = el.source.value.trim();
-  const destination_unc = el.destination.value.trim();
-  try {
-    validateUNC(source_unc,      "Source UNC");
-    validateUNC(destination_unc, "Destination UNC");
-  } catch (err) { showMsg(err.message, "error"); return; }
-
-  el.submitBtn.disabled = true;
-  el.submitLoader.classList.remove("hidden");
-  const payload = { source_unc, destination_unc, zip_password: el.password.value||null, overwrite: el.overwrite.checked };
-  try {
-    if (isApiMode) {
-      const result = await apiFetch("/api/jobs", { method:"POST", body:JSON.stringify(payload) });
-      const jobs   = readJobs();
-      jobs.unshift(normJob({
-        id: result.instanceId||result.id,
-        statusQueryGetUri:    result.statusQueryGetUri,
-        terminatePostUri:     result.terminatePostUri,
-        purgeHistoryDeleteUri:result.purgeHistoryDeleteUri,
-        source_unc, destination_unc, zipFile: basename(source_unc),
-        status:"queued", runtimeStatus:"Pending", progress:0, totalFiles:0, extractedFiles:0, failedFiles:0,
-        message: result.message||"Orchestration started.",
-        createdAt: new Date().toISOString(), startedAt:null, completedAt:null, error:null, input:payload,
-      }));
-      writeJobs(jobs);
-      showMsg("Job submitted successfully.", "success");
-    } else {
-      const jobs = readJobs();
-      jobs.unshift({
-        id: crypto.randomUUID ? crypto.randomUUID() : "job-"+Date.now(),
-        source_unc, destination_unc, zipFile: basename(source_unc),
-        overwrite: payload.overwrite, hasPassword: Boolean(payload.zip_password),
-        status:"queued", progress:0, totalFiles:0, extractedFiles:0, failedFiles:0,
-        message:"Job submitted in static website mode.",
-        createdAt: new Date().toISOString(), startedAt:null, completedAt:null, error:null,
-      });
-      writeJobs(jobs);
-      showMsg("Job added locally. Connect an API to run real unzip operations.", "success");
-    }
-    el.source.value = ""; el.destination.value = ""; el.password.value = ""; el.overwrite.checked = true;
-    await loadJobs();
-  } catch (err) {
-    showMsg(err.message||"Failed to submit job.", "error");
-  } finally {
-    el.submitBtn.disabled = false;
-    el.submitLoader.classList.add("hidden");
-  }
-}
-
-// ── terminate ──────────────────────────────────────────────────────────────
-async function terminateJob(jobId) {
-  const job = state.jobs.find(j => String(j.id)===String(jobId));
-  if (!job) return;
-  try {
-    const url = job.terminatePostUri
-      ? withKey(job.terminatePostUri)
-      : String(config.apiBaseUrl).replace(/\/$/,"") + `/api/jobs/${encodeURIComponent(job.id)}/terminate`;
-    await fetch(url, { method:"POST", mode:"cors", headers: apiHeaders() });
-    await loadJobs();
-  } catch (err) { alert("Terminate failed: " + err.message); }
-}
-
-// ── messages ───────────────────────────────────────────────────────────────
-function showMsg(msg, type="success") { el.submitMsg.textContent = msg; el.submitMsg.className = `message ${type}`; el.submitMsg.classList.remove("hidden"); }
-function clearMsg() { el.submitMsg.className = "message hidden"; el.submitMsg.textContent = ""; }
-
-// ── render ─────────────────────────────────────────────────────────────────
-function filtered() {
-  const q = state.search.trim().toLowerCase();
-  return state.jobs.filter(job => {
-    const sm = !state.filterStatus || job.status === state.filterStatus;
-    const hay = [job.id, job.zipFile, job.source_unc, job.destination_unc, job.status, job.runtimeStatus||""].join(" ").toLowerCase();
-    return sm && (!q || hay.includes(q));
-  });
-}
-function renderStats() {
-  const t = state.jobs.reduce((a,j) => { a.total++; if (a[j.status]!==undefined) a[j.status]++; return a; },
-    { total:0, queued:0, running:0, completed:0, failed:0 });
-  el.statTotal.textContent=t.total; el.statQueued.textContent=t.queued;
-  el.statRunning.textContent=t.running; el.statCompleted.textContent=t.completed; el.statFailed.textContent=t.failed;
-}
-function render() {
-  renderStats();
-  const jobs = filtered();
-  if (!jobs.length) { el.jobsBody.innerHTML = `<tr><td colspan="8" class="empty-row">No jobs match the current filters.</td></tr>`; return; }
-  el.jobsBody.innerHTML = jobs.map(job => {
-    const pct = Math.max(0,Math.min(100,Number(job.progress||0)));
-    const canStop = isApiMode && (job.status==="queued"||job.status==="running");
-    return `<tr>
-      <td><div class="job-title mono">${esc(job.id||"—")}</div><div class="job-meta">${esc(job.source_unc||"")}</div></td>
-      <td><span class="status-pill status-${esc(job.status||"queued")}">${esc(job.status||"queued")}</span><div class="tiny">${esc(job.runtimeStatus||"")}</div></td>
-      <td><div class="progress-shell"><div class="progress-bar" style="width:${pct}%"></div></div><div class="tiny">${pct}%</div></td>
-      <td><div>${esc(job.zipFile||basename(job.source_unc||""))}</div><div class="tiny mono">${esc(job.destination_unc||"")}</div></td>
-      <td><div class="tiny">Created: ${esc(fmtDate(job.createdAt))}</div><div class="tiny">Started: ${esc(fmtDate(job.startedAt))}</div><div class="tiny">Ended: ${esc(fmtDate(job.completedAt))}</div></td>
-      <td><div class="tiny">Total: ${esc(String(job.totalFiles??0))}</div><div class="tiny">Extracted: ${esc(String(job.extractedFiles??0))}</div><div class="tiny">Failed: ${esc(String(job.failedFiles??0))}</div></td>
-      <td>${esc(fmtDuration(job))}</td>
-      <td><div class="btn-row">
-        <button type="button" class="secondary-btn icon-btn" data-details="${esc(job.id)}">Details</button>
-        ${canStop?`<button type="button" class="danger-btn icon-btn" data-terminate="${esc(job.id)}">Stop</button>`:""}
-      </div></td>
-    </tr>`;
-  }).join("");
-  document.querySelectorAll("[data-details]").forEach(b => b.addEventListener("click", () => openDetails(b.dataset.details)));
-  document.querySelectorAll("[data-terminate]").forEach(b => b.addEventListener("click", () => { if (confirm("Terminate this job?")) terminateJob(b.dataset.terminate); }));
-}
-
-// ── modal ──────────────────────────────────────────────────────────────────
-function openDetails(jobId) {
-  const job = state.jobs.find(j => String(j.id)===String(jobId));
-  if (!job) return;
-  el.modalTitle.textContent = `Job Details · ${job.id}`;
-  const canStop = isApiMode && (job.status==="queued"||job.status==="running");
-  el.modalBody.innerHTML = `
-    <div class="detail-grid">
-      <div class="detail-card"><div class="detail-label">Status</div><span class="status-pill status-${esc(job.status)}">${esc(job.status)}</span></div>
-      <div class="detail-card"><div class="detail-label">Runtime Status</div>${esc(job.runtimeStatus||"—")}</div>
-      <div class="detail-card full"><div class="detail-label">Source UNC</div><div class="mono">${esc(job.source_unc||"—")}</div></div>
-      <div class="detail-card full"><div class="detail-label">Destination UNC</div><div class="mono">${esc(job.destination_unc||"—")}</div></div>
-      <div class="detail-card"><div class="detail-label">Created</div>${esc(fmtDate(job.createdAt))}</div>
-      <div class="detail-card"><div class="detail-label">Last Updated</div>${esc(fmtDate(job.lastUpdatedTime))}</div>
-      <div class="detail-card"><div class="detail-label">Duration</div>${esc(fmtDuration(job))}</div>
-      <div class="detail-card"><div class="detail-label">Progress</div>${esc(String(job.progress??0))}%</div>
-      <div class="detail-card"><div class="detail-label">Extracted Files</div>${esc(String(job.extractedFiles??0))}</div>
-      <div class="detail-card"><div class="detail-label">Failed Files</div>${esc(String(job.failedFiles??0))}</div>
-      <div class="detail-card full"><div class="detail-label">Message</div>${esc(job.message||"—")}</div>
-      <div class="detail-card full"><div class="detail-label">Error</div>${esc(job.error||"None")}</div>
-    </div>
-    ${canStop?`<div class="modal-actions"><button type="button" class="danger-btn" id="modalStopBtn">Stop / Terminate Job</button></div>`:""}`;
-  if (canStop) $("modalStopBtn").addEventListener("click", () => { if (confirm("Terminate this job?")) { terminateJob(job.id); closeDetails(); } });
-  el.modal.classList.remove("hidden");
-  el.modal.setAttribute("aria-hidden","false");
-}
-function closeDetails() { el.modal.classList.add("hidden"); el.modal.setAttribute("aria-hidden","true"); }
-
-// ── events ─────────────────────────────────────────────────────────────────
-el.submitBtn.addEventListener("click", submitJob);
-el.refreshBtn.addEventListener("click", loadJobs);
-el.clearBtn.addEventListener("click", async () => { writeJobs(readJobs().filter(j=>!["completed","failed"].includes(j.status))); await loadJobs(); });
-el.searchBox.addEventListener("input", e => { state.search = e.target.value; render(); });
-document.querySelectorAll(".filter-btn").forEach(b => b.addEventListener("click", () => {
-  document.querySelectorAll(".filter-btn").forEach(x=>x.classList.remove("active"));
-  b.classList.add("active"); state.filterStatus = b.dataset.status||""; render();
-}));
-el.modalClose.addEventListener("click", closeDetails);
-el.modalOverlay.addEventListener("click", closeDetails);
-document.addEventListener("keydown", e => { if (e.key==="Escape") closeDetails(); });
-
-// ── boot ───────────────────────────────────────────────────────────────────
-loadJobs();
-setInterval(loadJobs, Number(config.refreshMs||8000));
-
-})();
-</script>
+  <script src="app-config.js"></script>
+  <script src="app.js"></script>
 </body>
 </html>
